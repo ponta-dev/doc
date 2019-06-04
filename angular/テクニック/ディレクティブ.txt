@@ -1,0 +1,223 @@
+○　属性ディレクティブ
+他のHTML要素、属性、プロパティ、およびコンポーネントの動作を監視して変更する
+
+・NgClass
+CSSクラスの動的な追加、削除を行い、表示を制御する
+クラスバインディングは単一クラスに対するアクションとしてはいい
+<!-- toggle the "special" class on/off with a property -->
+<div [class.special]="isSpecial">The class binding is special</div>
+
+同時に多くのクラス制御を行いたい場合、NgClassを使った方が良い
+下記のようなクラス名とbool値の組み合わせをもつオブジェクトをNgClassに渡すことで、
+表示の一括制御ができる
+let currentClasses = {
+    'saveable': this.canSave,
+    'modified': !this.isUnchanged,
+    'special':  this.isSpecial
+};
+<div [ngClass]="currentClasses">This div is initially saveable, unchanged, and special</div>
+
+・NgStyle
+コンポーネントの状態に応じて、インラインのスタイルを動的に変更できる
+これも単一スタイルであればスタイルバインディングでよい
+<div [style.font-size]="isSpecial ? 'x-large' : 'smaller'" >
+  This div is x-large or smaller.
+</div>
+
+複数スタイルの管理の場合はNgStyleがいい
+let currentStyles = {
+    'font-style':  this.canSave      ? 'italic' : 'normal',
+    'font-weight': !this.isUnchanged ? 'bold'   : 'normal',
+    'font-size':   this.isSpecial    ? '24px'   : '12px'
+};
+<div [ngStyle]="currentStyles">
+  This div is initially italic, normal weight, and extra large (24px).
+</div>
+
+・NgModel
+入力フォームなどを利用したときの双方向バインディングに用いる
+<input [(ngModel)]="currentHero.name">
+ngModelを使う前に、FormsModuleをNgModuleのインポートリストに追加する必要がある
+
+import { FormsModule } from '@angular/forms';
+@NgModule({
+  imports: [
+    BrowserModule,
+    FormsModule  // <--- import into the NgModule
+  ],
+  /* Other module metadata */
+})
+export class AppModule { }
+
+ngMdoleでなく、単方向バインディングを組み合わせても同じことが実現できる
+<input [value]="currentHero.name"
+       (input)="currentHero.name=$event.target.value" >
+
+しかしそうした裏側の処理はきにしたくない
+NgModelでも下記の実装を隠している
+<input
+    [ngModel]="currentHero.name"
+    (ngModelChange)="currentHero.name=$event">
+出来る限り[(ngModel)]を使うべき
+
+こうした実装は対象の要素に固有なことなので、
+[(ngModel)]ではControlValueAccessorによってサポートされているものにしか使えない
+あえて下記のように関数を挟ませて、双方向バインディングに多少手を入れることはできる
+<input
+    [ngModel]="currentHero.name"
+    (ngModelChange)="setUppercaseName($event)">
+
+
+○　構造ディレクティブ
+HTMLのレイアウト、つまりDOMの構造などを変化させるのに使う
+
+・NgIf
+DOMの要素を追加、または削除するときに使う
+<app-hero-detail *ngIf="isActive"></app-hero-detail>
+bool値がtrueの時要素を生成し、falseの時はサブコンポ―ネントも含めて削除する
+必ず*をngIfの頭につけること
+
+表示非表示を制御したいときは、クラス、またはスタイルバインディングによって制御できる
+<!-- isSpecial is true -->
+<div [class.hidden]="!isSpecial">Show with class</div>
+<div [class.hidden]="isSpecial">Hide with class</div>
+
+<!-- HeroDetail is in the DOM but hidden -->
+<app-hero-detail [class.hidden]="isSpecial"></app-hero-detail>
+
+<div [style.display]="isSpecial ? 'block' : 'none'">Show with style</div>
+<div [style.display]="isSpecial ? 'none'  : 'block'">Hide with style</div>
+
+要素を非表示にしていてもDOMは残るので、全てのDOMに対するチェックの対象となり重くなる
+少数の要素であれば表示非表示でもいいが、それ以外のケースでは注意が必要
+NgIfの場合要素をDOMから完全に削除するので、そうした心配はない
+
+またNgIfはNullガードとしても使える
+表示非表示ではnullの場合エラーが起きる
+NgIfではnullは削除対象
+
+・NgForOf
+要素を繰り返し表示する時に用いる
+<div *ngFor="let hero of heroes">{{hero.name}}</div>
+コンポーネントに対して使うことも出来る
+<app-hero-detail *ngFor="let hero of heroes" [hero]="hero"></app-hero-detail>
+
+NgForに割り当てられた文字列はテンプレート式ではない
+独自の構文であり、配列から要素を取り出し、それを利用できるようにする
+letの変数に格納した値に対して参照できる
+また繰り返しごとにindexが回数を保持している
+<div *ngFor="let hero of heroes; let i=index">{{i + 1}} - {{hero.name}}</div>
+他にもlast,even,oddなど
+詳細はNgForOf APIを見る
+
+サーバから取得されたデータで一覧を更新する際、
+以前のDOMはそのままに、新しい要素の追加がしたい場合は、trackByを用いる
+trackByHeroes(index: number, hero: Hero): number { return hero.id; }
+<div *ngFor="let hero of heroes; trackBy: trackByHeroes">
+  ({{hero.id}}) {{hero.name}}
+</div>
+
+・NgSwitch
+複数の選択肢から条件によって必要なDOMを生成する
+*ngSwitchCase、*ngSwitchDefaultと組み合わせる形で利用する
+比較の型は任意
+[ngSwitch]自体は属性ディレクティブであり、DOMへの変更はしないので*はつかない
+
+<div [ngSwitch]="currentHero.emotion">
+  <app-happy-hero    *ngSwitchCase="'happy'"    [hero]="currentHero"></app-happy-hero>
+  <app-sad-hero      *ngSwitchCase="'sad'"      [hero]="currentHero"></app-sad-hero>
+  <app-confused-hero *ngSwitchCase="'confused'" [hero]="currentHero"></app-confused-hero>
+  <app-unknown-hero  *ngSwitchDefault           [hero]="currentHero"></app-unknown-hero>
+</div>
+
+○　テンプレート参照変数
+#varの形でテンプレートに対する参照変数を宣言できる
+<input #phone placeholder="phone number">
+
+下記のように使う
+<input #phone placeholder="phone number">
+<!-- lots of other elements -->
+<!-- phone refers to the input element; pass its `value` to an event handler -->
+<button (click)="callPhone(phone.value)">Call</button>
+
+ngFormディレクティブを使うことで、フォームの制御をより複雑にできる
+ここで#heroFormはngFormディレクティブへの参照をもっている
+<form (ngSubmit)="onSubmit(heroForm)" #heroForm="ngForm">
+  <div class="form-group">
+    <label for="name">Name
+      <input class="form-control" name="name" required [(ngModel)]="hero.name">
+    </label>
+  </div>
+  <button type="submit" [disabled]="!heroForm.form.valid">Submit</button>
+</form>
+<div [hidden]="!heroForm.form.valid">
+  {{submitMessage}}
+</div>
+
+参照変数の有効範囲はテンプレート全体
+同名の変数を定義した場合、実行時の値がわからなくなる
+ref-valは#valと同じ意味
+
+○　Input、Outputプロパティ
+@Inputデコレータが付いた変数は他のコンポーネントなどから値を受け取る
+@Outputデコレータが付いた変数は、多くの場合EventEmitterを返す
+つまり他のコンポーネントにイベントの通知を行うときに使う
+基本的に自分のコンポーネントで定義したプロパティに対してInput、Outputの定義は必要ない
+
+<app-hero-detail [hero]="currentHero" (deleteRequest)="deleteHero($event)">
+</app-hero-detail>
+上記のように他のコンポーネントに対するバインディングは、
+Input、Outputプロパティの宣言がなければエラーになる
+TypeScriptのパブリック、プライベート修飾子は他コンポーネントがアクセスできるかどうかに関係ない
+ただしpublicな要素でないとそもそもバインディングできないので注意
+
+@Input()  hero: Hero;
+@Output() deleteRequest = new EventEmitter<Hero>();
+あるいは上記を下記で置き換えられる
+@Component({
+  inputs: ['hero'],
+  outputs: ['deleteRequest'],
+})
+
+外部への公開名は()の中で宣言できるので、内部的なプロパティ名と別の名前を定義できる
+@Output('myClick') clicks = new EventEmitter<string>(); //  @Output(alias) 
+あるいは下記
+@Directive({
+  outputs: ['clicks:myClick']  // propertyName:alias
+})
+
+○　特別な演算子
+・|　パイプ
+｜演算子でパイプ処理ができる
+<div>Title through uppercase pipe: {{title | uppercase}}</div>
+繋げることで連鎖もできる
+<div>
+  Title through a pipe chain:
+  {{title | uppercase | lowercase}}
+</div>
+
+Jsonパイプなど便利なパイプがいくつかある
+<div>{{currentHero | json}}</div>
+{ "id": 0, "name": "Hercules", "emotion": "happy",
+  "birthdate": "1970-02-25T08:00:00.000Z",
+  "url": "http://www.imdb.com/title/tt0065832/",
+  "rate": 325 }
+
+・?　セーフナビゲーション
+セーフナビゲーション演算子(?)は、プロパティがnullや未定義値だった場合から保護するためのもの
+The current hero's name is {{currentHero?.name}}
+描画失敗から保護する
+
+参照の取得によってエラーが発生した場合、コンポーネントの描画が消える
+これはnullであってはいけない場合、それを見つけるためにあるべき姿
+一方でnullであることがその場で問題ない場合に?を使う
+NgIfや&&で評価式を連鎖させることでも対応できるが冗長
+The null hero's name is {{nullHero && nullHero.name}}
+
+なので?によるnullチェックを行うべき
+The null hero's name is {{nullHero?.name}}
+長いプロパティも下記でいける
+a?.b?.c?.d.
+
+
+

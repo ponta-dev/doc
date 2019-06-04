@@ -1,0 +1,84 @@
+
+○　コンポーネント
+Viewと呼ばれる画面のパッチを制御する
+アプリケーションロジックをクラス内に定義し、
+プロパティやメソッドを通じてViewを制御する
+
+ユーザがアプリケーションを移動する時、コンポーネントの作成、更新、破棄を行う
+
+○　コンポーネントメタデータ
+@Componentデコレータ―は、直下のクラスをコンポーネントとして認識し、そのメタデータを指定する
+コンポーネントメタデータは、コンポーネントとそのViewを表示するために
+必要なビルディングブロックをAngularに通知する
+・Selector：テンプレートの対応するタグを見つける度に、このコンポーネントのインスタンスを作成するよう指示するCSSセレクタ
+・templateURL：このコンポーネントのHTMLファイルまでの相対パスで、ホストViewを定義する
+・providers：コンポーネントが必要とするサービスのプロバイダ配列
+
+○　テンプレート構文
+テンプレートは、HTMLと似ているが、ロジックやDOMデータに基づいてHTMLを変換するAngularテンプレート構文も含む
+データバインディングによりアプリケーションとDOMデータを調整し、
+表示前にパイプでデータ変換を行い、ディレクティブによりアプリケーションロジックを適用する
+
+○　データバインディング
+データバインディングのマークアップは4つ
+Component　 →　DOM　：　{{value}}
+Component　 →　DOM　：　[property] = "value"
+Component　← 　DOM　：　(event) = "handler"
+Component　←→　DOM　：　[(ng-model)] = "property"
+
+例）
+<li>{{hero.name}}</li>
+<app-hero-detail [hero]="selectedHero"></app-hero-detail>
+<li (click)="selectHero(hero)"></li>
+
+例）
+<input [(ngModel)]="hero.name">
+双方向バインディングでは、データがプロパティバインディング同様にコンポーネントからDOMに流れる
+ユーザの変更はイベントバインディングと同様にプロパティを最新の値に更新する
+
+AngularはJavascriptイベントサイクルごとに全てのデータバインディングを1回処理する
+アプリケーションのコンポーネントルートから全ての子コンポーネントを経由する
+
+○　パイプ
+パイプを利用することで、HTMLの表示値変換を宣言できる
+@Pipeデコレータをもつクラスは、入力値を出力値に変えてビューに表示する関数を定義する
+標準で色々パイプがある
+テンプレートにおけるパイプの使用は下記のように行う
+{{interpolated_value | pipe_name}}
+
+パイプは連鎖させることも、表示の制御のための引数をとることもできる
+例）
+<!-- Default format: output 'Jun 15, 2015'-->
+<p>Today is {{today | date}}</p>
+
+<!-- fullDate format: output 'Monday, June 15, 2015'-->
+<p>The date is {{today | date:'fullDate'}}</p>
+
+<!-- shortTime format: output '9:43 AM'-->
+<p>The time is {{today | date:'shortTime'}}</p>
+
+○　ディレクティブ
+Angularテンプレートはダイナミック
+Angularがレンダリングすると、ディレクティブの指示に従ってDOMが変換される
+@Directiveデコレータをもつクラス
+コンポーネントも技術的にはディレクティブ
+コンポーネントの他に、構造と属性の2つの種類のディレクティブがあり、
+@Directiveをもつクラスにより独自のディレクティブを作れる
+
+・構造ディレクティブ
+DOM要素を追加、削除、置換することでレイアウトを変換する
+例）
+<li *ngFor="let hero of heroes"></li>
+<app-hero-detail *ngIf="selectedHero"></app-hero-detail>
+
+・属性ディレクティブ
+既存の要素の外観や動作を変更する
+例）
+<input [(ngModel)]="hero.name">
+
+
+
+
+
+
+

@@ -1,0 +1,26 @@
+久々に起動するとき用
+
+○　Node.jsのアップデート
+公式からインストーラ落としてきて実行する
+
+○　Angularのアップデート
+npmにグローバルにインストールしているものを一覧する
+> npm -g list --depth=0
+
+AngularCLIのアンインストール
+> npm uninstall -g @angular/cli
+
+npmキャッシュのクリア
+> npm cache verify
+
+Angularのインストール
+> npm install -g @angular/cli@latest
+バージョンが古いときは
+> npm update -g @angular/cli@latest
+
+○　新規プロジェクトの作成
+> ng new project名
+作成後
+> git remote add origin https://github.com/ponta0929/リポジトリ.git
+> git push -u origin master
+

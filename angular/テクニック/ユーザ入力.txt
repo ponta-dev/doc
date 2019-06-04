@@ -1,0 +1,40 @@
+
+イベントバインディングによってユーザイベントを検知できる
+(click)などで発火した場合DOMイベントが上がり、
+$eventオブジェクトにイベント情報が入る
+
+全ての標準DOMイベントには、イベントを発生させた要素がtargetに入る
+https://developer.mozilla.org/en-US/docs/Web/API/Event
+
+ただし、こうした$eventなどを型にはめて動作させることは、
+テンプレートの実装をコンポーネントが意識していて両方知っていないと書けなくなるので注意
+テンプレート参照変数を使うことで、テンプレート内で納めることもできる
+
+@Component({
+  selector: 'app-loop-back',
+  template: `
+    <input #box (keyup)="0">
+    <p>{{box.value}}</p>
+  `
+})
+export class LoopbackComponent { }
+
+上記は、(keyup)イベントをバインディングしなければ、全く意図したとおりに描画されない
+これは、イベントの監視があって初めてコンポーネントの描画をするため
+
+下記のようにした方がイベントハンドラとして定義しやすい
+<input (keyup)="onKey($event)">
+    ↓
+<input #box (keyup)="onKey(box.value)">
+
+・keyup.enterイベント
+Angularでは、keyupのイベント種類を多少宣言できる
+これによってイベントの種類を判定する処理をかかなくてもよい
+<input #box (keyup.enter)="onEnter(box.value)">
+
+複数イベントのバインディングもできる
+<input #box
+    (keyup.enter)="update(box.value)"
+    (blur)="update(box.value)">
+
+

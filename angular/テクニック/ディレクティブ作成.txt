@@ -1,0 +1,166 @@
+○　属性ディレクティブ
+
+Angularには3つのディレクティブがある
+・コンポーネント（テンプレート付のディレクティブ）
+・構造ディレクティブ（DOMのレイアウトを変更するディレクティブ）
+・属性ディレクティブ（見た目や動作を変更するディレクティブ）
+
+シンプルな属性ディレクティブの作成
+最低限@Directiveアノテーションでデコレートされたクラスを作る必要がある
+> ng generate directive ディレクティブ名
+使うディレクティブは、モジュールで宣言する必要がある（コンポーネント同様）
+
+import { Directive } from '@angular/core';
+
+@Directive({
+  selector: '[appHighlight]'
+})
+export class HighlightDirective {
+  constructor() { }
+}
+
+属性セレクタ―としての指定は[]が必要
+テンプレート内に[]内の属性がある際、Angularがディレクティブを走査し、作ったディレクティブを当てはめる
+命名は通常のHTML属性と一緒にならないよう気を付ける
+またngは予約語なので接頭につけると予期しないエラーが発生する可能性がある
+
+export class HighlightDirective {
+    constructor(el: ElementRef) {
+       el.nativeElement.style.backgroundColor = 'yellow';
+    }
+}
+
+ElementRefを使うことで、属性ディレクティブをもつ要素への参照を注入する
+ElementRefは、nativeElement属性から、元のDOMに対する参照を取得できる
+
+要素のイベントを拾うためには、HostListenerを使う
+@HostListener('mouseenter') onMouseEnter() {
+  this.highlight('yellow');
+}
+@HostListener('mouseleave') onMouseLeave() {
+  this.highlight(null);
+}
+private highlight(color: string) {
+  this.el.nativeElement.style.backgroundColor = color;
+}
+
+JavaScript標準のAPIによっても上記のようなことができるが、
+その場合要素へのイベントのデタッチなどをちゃんとやる必要がある
+
+@Inputを使うことで、ディレクティブに対して入力プロパティを定義できる
+ディレクティブのInputプロパティに対するバインディングは基本的に次の2つ
+<p appHighlight highlightColor="yellow">Highlighted in yellow</p>
+<p appHighlight [highlightColor]="'orange'">Highlighted in orange</p>
+
+highlightColor変数をディレクティブのセレクタと同名にすることで、
+[appHighlight]でディレクティブの使用とプロパティバインディングの2つを同時にでき、シンプルな記述になる
+@Inputのエイリアス指定で同名にするとよい
+バインドしたい属性が複数ある場合は、それぞれ変数へのバインディングを書く
+
+
+○　構造ディレクティブ
+*ngIf="hero"のように*構造ディレクティブで使用を宣言し、=""のマイクロシンタックスで式を定義できる
+Angularはこの表記に対して、ホスト要素とその子孫を囲むマークアップされた<ng-template>に置き換える
+各ディレクティブはそのテンプレートに対して異なる動作を行う
+構造ディレクティブは要素に対して1つだけ設定できる
+
+<div *ngIf="hero" class="name">{{hero.name}}</div>
+のような*構造ディレクティブの指定は内部的には下記と一緒
+<ng-template [ngIf]="hero">
+  <div class="name">{{hero.name}}</div>
+</ng-template>
+
+*ngForの場合も同様で下記のようになる
+<div *ngFor="let hero of heroes; let i=index; let odd=odd; trackBy: trackById" [class.odd]="odd">
+  ({{i}}) {{hero.name}}
+</div>
+
+<ng-template ngFor let-hero [ngForOf]="heroes" let-i="index" let-odd="odd" [ngForTrackBy]="trackById">
+  <div [class.odd]="odd">({{i}}) {{hero.name}}</div>
+</ng-template>
+
+マイクロシンタックスにより記述した文を、Angularのパーサーは<ng-template>に置き換える
+letはテンプレート内で利用する変数
+let hero はlet-heroという変数に変わる
+ofやtrackByのような入力プロパティは、頭文字を大文字にかえ、接頭にngForがついた属性名に変換される
+of →　[ngForOf] , trackBy → [ngForTrackBy]
+
+・<ng-template>
+HTMLをレンダリングするためのAngular要素
+直接表示されることはない
+素だとコメントに置き換えられる
+
+・<ng-container>
+構造ディレクティブをホストする要素がないときに使う
+コンパイル後の構成に影響を与えない
+<p>
+  I turned the corner
+  <ng-container *ngIf="hero">
+    and saw {{hero.name}}. I waved
+  </ng-container>
+  and continued on my way.
+</p>
+
+*ngIfと*ngForを２つ適用したいときにわざわざdivで段落を作らなくていい
+<div>
+  Pick your favorite hero
+  (<label><input type="checkbox" checked (change)="showSad = !showSad">show sad</label>)
+</div>
+<select [(ngModel)]="hero">
+  <ng-container *ngFor="let h of heroes">
+    <ng-container *ngIf="showSad || h.emotion !== 'sad'">
+      <option [ngValue]="h">{{h.name}} ({{h.emotion}})</option>
+    </ng-container>
+  </ng-container>
+</select>
+
+・構造ディレクティブの作成
+import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
+
+@Directive({ selector: '[appUnless]'})
+export class UnlessDirective {
+}
+
+ディレクティブのセレクタは小文字スタート、ngは接頭に使ってはいけない
+TemplateRefで<ng-template>内の要素にアクセスし、
+ViewContainerRefを通じてビューの要素にアクセスする
+constructor(
+  private templateRef: TemplateRef<any>,
+  private viewContainer: ViewContainerRef) { }
+
+@Inputプロパティで入力プロパティを受け取る
+名前は*appUnlessは[appUnless]に変換されるので同名がよい
+@Input() set appUnless(condition: boolean) {
+  if (!condition && !this.hasView) {
+    this.viewContainer.createEmbeddedView(this.templateRef);
+    this.hasView = true;
+  } else if (condition && this.hasView) {
+    this.viewContainer.clear();
+    this.hasView = false;
+  }
+}
+
+全体は下記のような感じ
+import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
+
+/**
+ * Add the template content to the DOM unless the condition is true.
+ */
+@Directive({ selector: '[appUnless]'})
+export class UnlessDirective {
+  private hasView = false;
+
+  constructor(
+    private templateRef: TemplateRef<any>,
+    private viewContainer: ViewContainerRef) { }
+
+  @Input() set appUnless(condition: boolean) {
+    if (!condition && !this.hasView) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+      this.hasView = true;
+    } else if (condition && this.hasView) {
+      this.viewContainer.clear();
+      this.hasView = false;
+    }
+  }
+}

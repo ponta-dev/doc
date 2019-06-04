@@ -1,0 +1,190 @@
+
+・@Inputの入力項目
+下記のようにセッターを使う方が良い
+  @Input()
+  set name(name: string) {
+    this._name = (name && name.trim()) || '<no name set>';
+  }
+ 
+  get name(): string { return this._name; }
+
+またOnChangesによる入力プロパティの監視も有効
+
+・@Outputの出力項目
+基本的にイベントトリガー
+@Output() voted = new EventEmitter<boolean>();
+this.voted.emit(agreed);
+
+・親から子への参照
+テンプレート参照変数を使うことで、親から子のコンポーネントのもつプロパティやメソッドにアクセスできる
+  <h3>Countdown to Liftoff (via local variable)</h3>
+  <button (click)="timer.start()">Start</button>
+  <button (click)="timer.stop()">Stop</button>
+  <div class="seconds">{{timer.seconds}}</div>
+  <app-countdown-timer #timer></app-countdown-timer>
+
+ただしテンプレート参照変数では親のテンプレート内で完結する必要があるので制限がある
+コンポーネントクラス内で子コンポーネントのインスタンスを操作する必要がある場合、
+@ViewChildを使う
+この方法に加えて、子のViewをクラス内で扱いたいときは、
+AfterViewInit ライフサイクルフックを使う
+
+import { AfterViewInit, ViewChild } from '@angular/core';
+import { Component }                from '@angular/core';
+import { CountdownTimerComponent }  from './countdown-timer.component';
+ 
+@Component({
+  selector: 'app-countdown-parent-vc',
+  template: `
+  <h3>Countdown to Liftoff (via ViewChild)</h3>
+  <button (click)="start()">Start</button>
+  <button (click)="stop()">Stop</button>
+  <div class="seconds">{{ seconds() }}</div>
+  <app-countdown-timer></app-countdown-timer>
+  `,
+  styleUrls: ['../assets/demo.css']
+})
+export class CountdownViewChildParentComponent implements AfterViewInit {
+ 
+  @ViewChild(CountdownTimerComponent)
+  private timerComponent: CountdownTimerComponent;
+ 
+  seconds() { return 0; }
+ 
+  ngAfterViewInit() {
+    // Redefine `seconds()` to get from the `CountdownTimerComponent.seconds` ...
+    // but wait a tick first to avoid one-time devMode
+    // unidirectional-data-flow-violation error
+    setTimeout(() => this.seconds = () => this.timerComponent.seconds, 0);
+  }
+ 
+  start() { this.timerComponent.start(); }
+  stop() { this.timerComponent.stop(); }
+}
+
+親から子へ直接参照するのが望ましくないケースも結構ありそう
+そうしたときは、Serviceを用意し、サービス経由でコンポーネントの変更やイベントを通知する
+
+
+
+○　コンポーネントスタイル
+Angularのコンポーネントに対するスタイルは、@Componentのメタデータで指定する
+メタデータで指定されたスタイルのスコープは、コンポーネント内でのみ有効
+子コンポーネントなどに継承はされない
+
+・特別なセレクタ
+:host
+コンポーネントをホストする要素をターゲットできる
+:host(.active)など、ホスト内の特定のクラス指定も可能
+
+:host-content
+コンポーネントのホスト要素の先祖のうち、ドキュメントルートまでのCSSクラスを対象にする
+
+
+○　動的コンポーネント
+実行時に動的にコンポーネントを生成する
+テンプレート内に、コンポーネントへの固定参照なしにコンポーネントを読み込む
+
+・アンカーディレクティブ
+コンポーネントを動的に読み込む場所を定義する
+下記のようなディレクティブを作成する
+import { Directive, ViewContainerRef } from '@angular/core';
+
+@Directive({
+  selector: '[ad-host]',
+})
+export class AdDirective {
+  constructor(public viewContainerRef: ViewContainerRef) { }
+}
+
+作ったディレクティブを使うコンポーネント側のHTML定義は下記
+template: `
+            <div class="ad-banner-example">
+              <h3>Advertisements</h3>
+              <ng-template ad-host></ng-template>
+            </div>
+          `
+<ng-template>に対して作ったad-hostディレクティブを適用する
+つまりここが動的コンポーネントを埋め込む場所になる
+
+コンポーネントのクラス内では、サービスから動的コンポーネントのもとになるデータの配列をもらう
+export class AdBannerComponent implements OnInit, OnDestroy {
+  @Input() ads: AdItem[];
+  currentAdIndex = -1;
+  @ViewChild(AdDirective) adHost: AdDirective;
+  interval: any;
+
+  constructor(private componentFactoryResolver: ComponentFactoryResolver) { }
+
+  ngOnInit() {
+    this.loadComponent();
+    this.getAds();
+  }
+
+  ngOnDestroy() {
+    clearInterval(this.interval);
+  }
+
+  loadComponent() {
+    this.currentAdIndex = (this.currentAdIndex + 1) % this.ads.length;
+    let adItem = this.ads[this.currentAdIndex];
+
+    let componentFactory = this.componentFactoryResolver.resolveComponentFactory(adItem.component);
+
+    let viewContainerRef = this.adHost.viewContainerRef;
+    viewContainerRef.clear();
+
+    let componentRef = viewContainerRef.createComponent(componentFactory);
+    (<AdComponent>componentRef.instance).data = adItem.data;
+  }
+
+  getAds() {
+    this.interval = setInterval(() => {
+      this.loadComponent();
+    }, 3000);
+  }
+}
+
+adItemはcomponentとそのデータであるdataプロパティをもつ構造体
+this.componentFactoryResolver.resolveComponentFactory(adItem.component);
+でコンポーネントの実態を作っているっぽい
+adhostディレクティブに対する参照からviewContainerRefをクリアし、
+viewContainerRef.createComponent(componentFactory);
+でディレクティブに埋めてる
+ComponentFactory は各コンポーネントのインスタンスを作成する
+
+動的に生成されるコンポーネントは、コンポーネントの参照がないので、
+ModuleのentryComponentに対象のコンポーネントを指定する必要がある
+entryComponents: [ HeroJobAdComponent, HeroProfileComponent ],
+
+AddItemは下記
+import { Type } from '@angular/core';
+
+export class AdItem {
+  constructor(public component: Type<any>, public data: any) {}
+}
+
+AdServiceは下記
+import { Injectable }           from '@angular/core';
+
+import { HeroJobAdComponent }   from './hero-job-ad.component';
+import { HeroProfileComponent } from './hero-profile.component';
+import { AdItem }               from './ad-item';
+
+@Injectable()
+export class AdService {
+  getAds() {
+    return [
+      new AdItem(HeroProfileComponent, {name: 'Bombasto', bio: 'Brave as they come'}),
+
+      new AdItem(HeroProfileComponent, {name: 'Dr IQ', bio: 'Smart as they come'}),
+
+      new AdItem(HeroJobAdComponent,   {headline: 'Hiring for several positions',
+                                        body: 'Submit your resume today!'}),
+
+      new AdItem(HeroJobAdComponent,   {headline: 'Openings in all departments',
+                                        body: 'Apply today'}),
+    ];
+  }
+}
+

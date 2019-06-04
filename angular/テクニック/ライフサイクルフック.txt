@@ -1,0 +1,97 @@
+
+○　ライフサイクルフック
+Angularはコンポーネントやディレクティブに対して、
+ライフサイクルのそのタイミングに介入できるフックの提供をする
+
+開発者は、Angular coreライブラリの、ライフサイクルフックインタフェースを
+１つ、ないし複数実装することでそのタイミングに介入できる
+ngが頭に付く単一のライフサイクルメソッドを提供する
+OnInitインタフェースならngOnInitメソッド
+
+○　ライフサイクルシーケンス
+コンストラクタによってコンポーネント、なしディレクティブが作成された後、
+Angularは次のタイミングでライフサイクルフックを呼び出す
+
+・OnChanges
+データバインドされた入力プロパティを設定するときに呼び出される
+現在、及び以前のプロパティ値をSimpleChangesオブジェクトを受け取る
+OnInitの前に呼ばれ、データバインドされた入力プロパティが変更されるたびに呼ばれる
+重要なのは@Inputがマークされた入力プロパティの変更のみ拾うところ
+かつオブジェクトを参照する場合、オブジェクトの中身の変更は拾わない
+
+ngOnChanges(changes: SimpleChanges) {
+  for (let propName in changes) {
+    let chng = changes[propName];
+    let cur  = JSON.stringify(chng.currentValue);
+    let prev = JSON.stringify(chng.previousValue);
+    this.changeLog.push(`${propName}: currentValue = ${cur}, previousValue = ${prev}`);
+  }
+}
+
+・OnInit
+データバインドされたプロパティを最初に表示し、
+コンポーネント、ディレクティブの入力プロパティを設定した後で初期化を行う
+最初のOnChangesの後に1度だけ呼ばれる
+
+構築直後に複雑な初期化を行うために使う
+コンストラクタの中ではなく、OnInitを使うべき
+コンストラクタは初期の簡単な変数の初期化以外行うべきではない
+OnInitの中でサーバ通信等の処理を行う
+
+・DoCheck
+Angularが検出できない変更を検出し、それに基づいた実行を行う
+変更検知の実行中に毎回、またOnInitの直後に呼ばれる
+OnChangesで拾えない変更を拾ったりする
+一方で、このイベントは非常に頻繁に呼ばれるので、コストは絶対に考えること
+マウスイベント、他のコンポーネントでの入力等全てがトリガーになる
+
+・AfterContentInit
+外部コンテンツも含めて投影されたあとに呼ばれる
+最初のDoCheckの後に1度だけ呼ばれる
+<ng-content>タグが外部コンテンツのプレースホルダ
+コンポーネントに対してどこに外部コンテンツを表示するか宣言として使う
+ContentChildを介してデータにアクセスする
+@ContentChild(ChildComponent) contentChild: ChildComponent;
+AfterViewとは、テンプレート内に宣言した子コンポーネントか、
+テンプレートにAngularが投影した子コンポーネントかが違う
+こっちでは単方向フローについて気にする必要はない
+
+・AfterContentChecked
+外部コンテンツも含めてチェックをやった後に呼ばれる
+AfterContentInitとDoCheckの後に呼ばれる
+
+・AfterViewInit
+コンポーネントのビューと、それに含まれる子コンポーネント、ディレクティブの初期化が終わった後に呼ばれる
+最初のAfterContentCheckedのあとに一度だけよばれる
+子Viewに対する変更イベントの検知とかに使える
+@ViewChildの子コンポーネントに対する参照変数をキーにして子要素にアクセスする
+@ViewChild(ChildViewComponent) viewChild: ChildViewComponent;
+
+・AfterViewChecked
+コンポーネントのビューとそれに含まれる子コンポーネント、ディレクティブの全てのチェックが終わった後に呼ばれる
+AfterViewInitと、そのあと全てのAfterContentCheckedの後に呼ばれる
+子Viewに対する変更イベントの検知とかに使える
+@ViewChildの子コンポーネントに対する参照変数をキーにして子要素にアクセスする
+@ViewChild(ChildViewComponent) viewChild: ChildViewComponent;
+
+Angularの単方向データフローでは、Viewが更新された後の変更があるとエラーをスローするので注意
+
+・OnDestroy
+Angularがコンポーネント、ディレクティブを破棄する直前に呼ばれる
+メモリリーク回避のため、Observableの購読を解除し、イベントハンドラをデタッチする
+基本的にクリーンアップロジックを受け持つが、
+他のコンポーネントに自分が終了することを伝えるタイミングでもある
+基本的にアプリケーションに登録した全てのコールバック登録を解除する
+
+
+インターフェースがimplementされてなくても、Javascriptなのでマストではない
+それに類する関数が定義されていれば実行される
+ただインタフェースは実装するべき
+頻繁にトリガーされるCheck系のフックにあまり実装をいれない方が良い
+
+
+
+
+
+
+

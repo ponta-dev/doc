@@ -1,0 +1,37 @@
+○　プロジェクト作成
+ng new プロジェクト名
+
+○　サーバ起動
+ng serve
+http://localhost:4200/
+でデフォ起動
+
+○　コンポーネントとかの基本系作成
+ng generate ~~ ~~の名前
+~~は下記種類がある
+directive|pipe|service|class|guard|interface|enum|module
+
+> ng genarate component sample/sample
+と打つと、
+app/sample/sample/sample.componentセットが出来る
+
+> ng generate module sample
+でapp/sample/sample.moduleができる
+--module=sampleでモジュールに紐づけたコンポーネントとかを作れる
+パスは上と一緒（モジュールとパスを合わせたいときはモジュール名/とする）
+
+○　ビルド
+ng build
+デフォでdistに成果物
+--prod をつけると製品版のビルド
+
+○　単体テスト
+ng test
+Karmaのテストサーバが起動する
+
+○　E2Eテスト
+ng e2e
+ProtractorのE2Eテスト
+
+○　ヘルプ
+ng help

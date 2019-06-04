@@ -1,0 +1,264 @@
+
+○　テンプレート式
+テンプレート内で{{property}}
+中のproperyは多くの場合がコンポーネント内のプロパティ名
+例）
+<p>{{title}}</p>
+<div><img src="{{itemImageUrl}}"></div>
+
+こんな式も書こうと思えば書ける
+<!-- "The sum of 1 + 1 is not 4" -->
+<p>The sum of 1 + 1 is not {{1 + 1 + getVal()}}.</p>
+
+Angularでは{{}}内の式を評価し、その式の結果を文字列に変換した後、隣接するリテラルと結合する
+そうして得た結果を、最後にディレクティブや要素に当てはめる
+{{}}以外の文字を使う場合は、Componentメタデータから上書きする
+interpolation: [string, string]
+
+プロパティバインディングの場合は{{}}ではなく、
+[property] = "式"
+式のコンテキストは通常コンポーネントのインスタンス
+なのでコンポーネントのプロパティ値がふつう入る
+例）
+<h4>{{recommended}}</h4>
+<img [src]="itemImageUrl2">
+
+式は、テンプレートの入力変数名なども参照できる
+例）NgFor
+<ul>
+  <li *ngFor="let customer of customers">{{customer.name}}</li>
+</ul>
+例）DOMの参照
+<label>Type something:
+  <input #customerInput>{{customerInput.value}}
+</label>
+
+式内の用語は、
+・テンプレートの変数
+・ディレクティブのコンテキストオブジェクト
+・コンポーネントのメンバー
+名前重複した場合の優先度は上から順
+
+テンプレート内の式からconsoleなどの呼び出しは出来ない
+またwindowやdocumentなどの変数へのアクセスも出来ない
+
+○　ガイド
+テンプレート式は、ターゲットのプロパティ以外の値を更新するべきではない
+これは単方向データフローの観点から不可欠な規則
+基本値は変えない
+
+Angularでは、全ての変更検出サイクルの後にテンプレート式を実行する
+変更検出サイクルは、Promise解決、HTTP、タイマーイベント、キー押下、マウス移動など
+様々な非同期アクティビティによって引き起こされる
+重いデバイスを想定する場合、あまり式を重くしないか、キャッシュ等を考える
+
+基本的にテンプレート内に式を書かない
+せいぜいBooleanの！とかくらいに収める
+
+○　テンプレートステートメント
+イベントバインディング
+(event) = "式"
+単方向データフローの反対側の向きのトリガーで、コンポーネントに対して様々なことを行える
+上の単方向バインディングもそうだが、式は純粋なJavascriptの式ではなく、ある程度制限がある
+イベントバインディングの場合;や=などが使える
+
+イベントバインディングのコンテキストも、単方向バインディングの式と同様で、
+コンポーネントのインスタンスなどを参照できる
+例）
+<button (click)="deleteHero()">Delete hero</button>
+
+また$eventオブジェクトや、テンプレート内変数、DOMの参照なども参照できる
+例）
+<button (click)="onSave($event)">Save</button>
+<button *ngFor="let hero of heroes" (click)="deleteHero(hero)">{{hero.name}}</button>
+<form #heroForm (ngSubmit)="onSubmit(heroForm)"> ... </form>
+
+優先度も前述の優先度と同じ
+consoleやwindow、documentにアクセスできないのも同じ
+こっちでもテンプレート内で複雑な式の実行はするべきではない
+関数の実行や1回の代入くらい
+
+○　データバインディングについて
+Angularでは大きく3つのデータバインディングがある
+・コンポーネント　 →　DOM
+{{expression}}
+[target]="expression" //[src]="link"
+bind-target="expression" //bind-src="link"
+
+・コンポーネント　←　 DOM
+(target)="statement" //(click)="func()"
+on-target="statement" //on-click="func()"
+
+・コンポーネント　←→　DOM
+[(target)]="expression"
+bindon-target="expression"
+
+こうしたtargetで指定しているのはDOMの設定であってHTMLの属性ではない
+DOMのプロパティとHTMLの属性は必ずしも＝ではない
+DOMプロパティにあってHTML属性にないものや、逆も沢山ある
+プロパティは可変だが、属性値は固定
+
+例えばブラウザが
+<input type="text" value="Bob">
+をレンダリングすると、valueプロパティがBobのDOMを生成する
+ユーザが入力値をSalyに変えると、DOMのプロパティはSalyに変更される
+しかし、HTMLの属性値は、input.getAttribute('value') returns "Bob"となり変更されていない
+HTML属性値は初期化時の値であり、DOMのプロパティは現在の値を返す
+ボタンのdisable属性とかは少し特殊でdisabledをつけるだけで初期値が変わる
+ただ属性値が変更できるわけではなく、下記みたいなのは意味ない
+<button disabled="false">Still Disabled</button>.
+
+繰り返しだがAngularのテンプレート構文で指定しているのはあくまでDOMのプロパティであって、
+HTMLの属性ではない
+Angularの世界では属性の唯一の役割は要素とディレクティブの状態を初期化すること
+データバインディングを作成するときは、ターゲットオブジェクトのプロパティとイベントだけを扱っていて、
+事実上属性は消えている
+
+データバインディングのターゲットはDOMのプロパティ
+・Property
+ターゲット
+Element property
+Component property
+Directive property
+例）
+<img [src]="heroImageUrl">
+<app-hero-detail [hero]="currentHero"></app-hero-detail>
+<div [ngClass]="{'special': isSpecial}"></div>
+
+・Event
+Element event
+Component event
+Directive event
+例）
+<button (click)="onSave()">Save</button>
+<app-hero-detail (deleteRequest)="deleteHero()"></app-hero-detail>
+<div (myClick)="clicked=$event" clickable>click me</div>
+
+・Two-way
+Event and property
+例）
+<input [(ngModel)]="name">
+
+・Attribute
+Attribute (例外)
+例）
+<button [attr.aria-label]="help">help</button>
+
+・Class
+class property
+例）
+<div [class.special]="isSpecial">Special</div>
+
+・Style
+style property
+例）
+<button [style.color]="isSpecial ? 'red' : 'green'">
+
+プロパティバインディングは単方向バインディングであり、プロパティの読み出しを行うことは出来ない
+同様にプロパティバインディングによってターゲットのメソッドを呼ぶことも出来ない（イベントとか）
+そうしたことがしたい場合、ViewChild や ContentChild のAPIを利用する
+
+プロパティの指定は下記のように行う
+<img [src]="heroImageUrl">
+<img bind-src="heroImageUrl">
+Angularではプロパティの名前はまずディレクティブに該当するものがないか検査する
+ディレクティブにもプロパティにも該当する名前がない場合はエラーを返す
+
+テンプレート式は、ターゲットプロパティが期待する型を返すべき
+StringならString、IntならInt
+ちゃんと[]をつけないと評価されないので注意
+特に式が必要なく、変更もないなら[]はいらない
+例えばvalue="定数"でいい
+
+補完とプロパティバインディングどちらを使うべきか？
+次の2つは同じこと
+<p><img src="{{heroImageUrl}}"> is the <i>interpolated</i> image.</p>
+<p><img [src]="heroImageUrl"> is the <i>property bound</i> image.</p>
+
+<p><span>"{{title}}" is the <i>interpolated</i> title.</span></p>
+<p>"<span [innerHTML]="title"></span>" is the <i>property bound</i> title.</p>
+
+使い分けに関して技術的な差異はないので、見やすい方を選ぶ
+ただし、プロパティの設定に関して文字列以外の値を設定する場合はプロパティバインディングを用いる
+
+Angularのデータバインディングでは、<script>を含むようなコンテンツの表示はセキュリティ上出来ない
+
+・属性バインディング
+Angularではプロパティバインディングの優先度が高い事を理解したうえで、
+プロパティとして存在しない属性に対してバインディングを行いたいときにのみ、
+属性バインディングを利用する
+属性バインディングは[attr.target]="式"
+例）
+<table border=1>
+  <!--  expression calculates colspan=2 -->
+  <tr><td [attr.colspan]="1 + 1">One-Two</td></tr>
+
+  <!-- ERROR: There is no `colspan` property to set!
+    <tr><td colspan="{{1 + 1}}">Three-Four</td></tr>
+  -->
+
+  <tr><td>Five</td><td>Six</td></tr>
+</table>
+
+・クラスバインディング
+要素のクラスを追加、削除するのに使う
+文字列によるクラス上書きや、Bool値によるクラス制御ができる
+例）
+<!-- toggle the "special" class on/off with a property -->
+<div [class.special]="isSpecial">The class binding is special</div>
+
+<!-- binding to `class.special` trumps the class attribute -->
+<div class="special"
+    [class.special]="!isSpecial">This one is not so special</div>
+
+複数クラスの制御がしたい場合は、NgClassディレクティブの方が適する
+
+・スタイルバインディング
+クラスとほぼ一緒
+<button [style.color]="isSpecial ? 'red': 'green'">Red</button>
+<button [style.background-color]="canSave ? 'cyan': 'grey'" >Save</button>
+
+こちらも複数を制御したいときは、NgStyleディレクティブを使う方が良い
+
+○　イベントバインディング
+イベントバインディングを使うことで、ユーザのアクションをトリガーにした制御ができる
+<button (click)="onSave()">Save</button>
+(click)もon-clickも一緒
+ターゲットイベントが既知かどうかを確認し、何にも一致しない場合エラーになる
+
+イベントが実行された場合、$eventオブジェクトを通じてイベントにアクセスできる
+イベントオブジェクトの形はイベントによって異なる
+ターゲットイベントがネイティブDOM要素のイベントの場合、
+$eventはtargetやtarget.valueをもつDOMイベントオブジェクト
+<input [value]="currentHero.name"
+       (input)="currentHero.name=$event.target.value" >
+
+Angular EventEmitterを用いることでカスタムイベントを作れる
+EventEmitter.emit(payload)を使い、値をペイロードに渡してイベントを発火させる
+親要素は、このイベントリッスンし、$eventオブジェクトのペイロードにアクセスすることでイベント通知を受け取る
+
+子にプロパティを渡して実態は親が管理している時とか
+// This component makes a request but it can't actually delete a hero.
+例）子
+deleteRequest = new EventEmitter<Hero>();
+
+delete() {
+  this.deleteRequest.emit(this.hero);
+}
+
+例）親
+<app-hero-detail (deleteRequest)="deleteHero($event)" [hero]="currentHero"></app-hero-detail>
+
+○　双方向バインディング
+[()]で双方向
+実際にはプロパティバインディングとイベントバインディング
+<app-sizer [(size)]="fontSizePx"></app-sizer>
+は下記と一緒
+<app-sizer [size]="fontSizePx" (sizeChange)="fontSizePx=$event"></app-sizer>
+
+これに対応できない要素への双方向バインディングは、
+NgModelディレクティブを用いて出来るようになる（inputフォームとか）
+
+
+
+

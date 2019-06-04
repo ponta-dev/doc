@@ -1,0 +1,73 @@
+○　サービス提供のスコープ
+・ルートインジェクタ
+@Injectable({
+  providedIn: 'root',
+})
+サービスプロバイダをルートに指定すると、アプリケーション全体からサービスを参照できる
+
+・モジュールインジェクタ
+import { UserModule } from './user.module';
+
+@Injectable({
+  providedIn: UserModule,
+})
+モジュールをインポートしない限り使えないようにする
+モジュール内で宣言することも出来る
+import { UserService } from './user.service';
+
+@NgModule({
+  providers: [UserService],
+})
+
+・遅延モジュールのスコープ
+遅延ロードなしでモジュールが事前ロードされた場合、全てのモジュールの全てのプロバイダを
+アプリケーション全体で使えるようにする
+遅延ロードされた場合、アプリケーション全体で使えるようにはならない
+
+・コンポーネントインジェクタ
+@Component({
+/* . . . */
+  providers: [UserService]
+})
+コンポーネントレベルのインスタンスが必要な時に使う
+
+○　シングルトンサービス
+基本的にrootインジェクタに対して登録宣言することでシングルトンサービスとする
+一方で、様々なモジュールでインポートされることが予想出来て、
+かつルートレベルのサービス提供と、コンポーネント、ディレクティブの宣言を同時に行うようなモジュールの場合、
+ルートモジュールのサービスインスタンスと、子モジュールのサービスインスタンスが重複し、
+シングルトンの提供にならない
+こうしたモジュールの提供がある場合、forRoot関数を実装することで、
+ルートモジュールに対してはサービスプロバイダの登録も含めたモジュールを、
+子モジュールに対してはディレクティブ等の宣言のみのモジュールを提供できる
+
+forRoot関数は、サービス設定を行うオブジェクトを受け取り、
+ModuleWithProvidersを返す（下記のプロパティをもつシンプルなオブジェクト）
+・ngModule: この例ではCoreModuleというクラスです。
+・providers: 設定するプロバイダー。
+
+ここで明示的に提供したプロバイダーが、インポートしたプロバイダーより優先される
+static forRoot(config: UserServiceConfig): ModuleWithProviders {
+  return {
+    ngModule: CoreModule,
+    providers: [
+      {provide: UserServiceConfig, useValue: config }
+    ]
+  };
+}
+
+遅延モジュールでの再インポートを防ぐ場合、対象のモジュールに下記のようなコンストラクタを作る
+constructor (@Optional() @SkipSelf() parentModule: CoreModule) {
+  if (parentModule) {
+    throw new Error(
+      'CoreModule is already loaded. Import it in the AppModule only');
+  }
+}
+
+@SkipSelfは循環参照を防ぎ、上位のモジュールから参照を取得する宣言
+@Optionalはその参照が失敗してもいいことを示す宣言
+こうすることで通常（ルートのみでインポートされた場合）参照は失敗するが、それを無視できる
+逆に子モジュールで再インポートした場合参照を取得できるので、その場合エラーをスローする
+
+
+
