@@ -1,0 +1,61 @@
+<参考>
+https://qiita.com/marnie_ms4/items/7014563083ca1d824905
+
+
+〇 ベンチマーク
+go test の実行に-benchのオプションをつけるとベンチマークができる
+-benchの後に続く文字が正規表現の指定になる
+-bench=Xxxとかと一緒
+
+テストファイルに下記のような関数を作る
+func BenchmarkXxx(b *testing.B) 
+
+> go test -v ./test
+でテストの実行
+この中のベンチマークテストをする場合
+> go test -v ./test -bench Xxx
+テストも一緒に実行されるので、ベンチマークだけしたい場合は-run Xxxで実行する関数を指定できる
+
+for i := 0; i < b.N; i++ {
+    //ベンチマークする関数
+}
+ベンチマーク時間から自動で算出された値がb.Nに入る
+
+実行結果は下記のように出る
+BenchmarkXxx  2000000    676 ns/op   106 B/op   2 allocs/op
+・実行した回数
+・1回あたりの実行にかかった時間(ns/op)
+・1回あたりのアロケーションで確保した容量
+・1回あたりのアロケーション回数
+
+> go test -bench . -benchmem
+・-benchmem
+メモリ関連の情報を出力する
+
+・-bentitime t
+何秒間計測するかtで指定する
+デフォルトは1秒
+
+・-cpuprofile=*.prof
+CPUのプロファイルが取れる
+go tool pprofで内容が見える
+
+・-count
+テストする回数を指定する
+
+・-cpu
+実行するcpu数
+
+・-memprofile=*.prof
+詳細なメモリープロファイルが取れる
+go tool pprofで内容が見える
+
+〇 よく使うメソッド
+・B.ResetTimer()
+計測時間をリセットする
+比べたい処理部分の前に行うのが普通
+併せてB.StartTimer()、B.StopTimer()とかも使う
+
+・B.Benchmark()
+go testを使わずにベンチマークをする
+
