@@ -1,0 +1,20 @@
+
+〇 Language Server
+https://github.com/saibing/tools
+https://github.com/golang/go/wiki/gopls
+https://mattn.kaoriya.net/software/lang/go/20181217000056.htm
+
+
+GOのVSC等のエディタを使った開発で、コードの補完は基本ほぼマスト
+ただ補完について今までgocodeがこれを実現していた
+gocode は言語のコード補完サーバ
+
+多くのユーザに使われてきたが、メンテナンスができなくなったため
+最近のGo1.12あたりは補完がうまく動かないとか
+なのでGOのコミュニティレベルの動きでLanguage Serverを新しく建てる動きがあり
+コード補完をうまく動かすためにVSCの設定等をいじる必要がある
+
+設定自体は基本的に下記のReadmeのインストール手順をたたくだけ
+https://github.com/saibing/tools
+
+展開先はどこでもいいが、モジュールシステムで動くのでGOPATH直下はやめたほうがよさげ

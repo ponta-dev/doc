@@ -1,0 +1,108 @@
+<参考>
+http://cuto.unirita.co.jp/gostudy/post/unittest/
+https://qiita.com/tmzkysk/items/8bb37795ac223664d682
+
+https://qiita.com/atotto/items/f6b8c773264a3183a53c
+http://tweeeety.hateblo.jp/entry/2018/01/22/233520
+
+
+
+〇 Go言語のテスト
+Goではファイル名でテストファイルかどうかを見分ける
+テストファイルは _test.go で終わる
+Goの標準ライブラリでは、testingパッケージがテストをサポートする
+
+>go test パッケージディレクトリ名
+でテストを実行する
+-v オプションで実行の詳細がでるので-vはつけたほうがいい
+-run オプションで特定の関数だけ実行できる
+go test -run TestAdd ./test とか
+
+import ~~のところと同じ
+または./~~~と書くと実行時の相対パスのディレクトリを試験する
+./...で特定ディレクトリ以下の再帰的な試験を行う
+
+〇 testing パッケージ
+> import "testing"
+testingパッケージはテストに利用できる構造体を持っている
+
+・testing.T構造体
+テストの合否制御やテストメッセージの出力に使う
+
+・testing.M構造体
+テスト実行のメインルーチンを明示的に作成するために使う
+
+TestMain関数を作ることで、テストの実行前後に処理を入れられる
+パッケージ全体の事前、事後に処理を入れるときに使う
+DBのイニシャライズとかする時に使う
+code := m.Run()でてテストの実行
+os.Exit(code)でテストの終了
+
+・testing.B構造体
+ベンチマークテストに利用する
+
+〇 テストメソッドの作成
+頭がTestで始まる関数を作成する
+func Test～～(t testing.T) {
+    ///
+}
+
+エラーメッセージ用の下記がよばれるとテストは失敗扱いになる
+ただし、失敗扱いになるが処理は継続する
+t.Error("メッセージ",,)
+t.Errorf("フォーマット指定子",パラメタ,,,)
+
+実行を即座に停止させる失敗は下記を使う
+t.Fatal("メッセージ",,)
+t.Fatalf("フォーマット指定子",パラメタ,,,)
+
+通常のログ出力は下記
+t.Log("メッセージ",,)
+t.Logf("フォーマット指定子",パラメタ,,,)
+
+assert系の関数がなく、テストの成功失敗はすべてメッセージによって行われる
+
+t.Run("テスト名", func(t *testing.T) {
+    テスト
+})
+でテスト名とかを決めて実行できる
+
+〇 カバレッジ
+go testにオプションをつけることでカバレッジが取れる
+
+・-coverオプション
+行カバレッジがとれる
+
+・-coverprofile=cover.outオプション
+カレントディレクトリにカバレッジの詳細が落ちる
+
+・go tool cover コマンド
+> go tool cover -func=cover.out
+で関数ごとのカバレッジが見える
+
+> go tool cover -html=cover.out
+ブラウザでカバレッジが見える
+
+〇 テスト手法
+patterns := []struct {
+    val1 int
+    val2 int
+    expected int
+}{
+    {2, 2},
+    {3, 3}.
+    {4, 4},
+}
+
+↑こんな感じのパターンを作って
+for index, pattern := range patterns {
+    result := testFunc(pattern.val1, pattern.val2)
+    if pattern.expected != result {
+        t.Errorf("%s". "失敗しました")
+    }
+}
+↑こんな感じに期待とあっているか試験する
+
+
+
+

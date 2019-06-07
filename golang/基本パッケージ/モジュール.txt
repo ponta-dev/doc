@@ -1,0 +1,94 @@
+<参考>
+https://budougumi0617.github.io/2019/02/15/go-modules-on-go112/
+https://text.baldanders.info/golang/go-module-aware-mode/
+
+
+〇 Go Modules
+Go1.11 から導入され、Go1.13にて通常Onになる予定の機能
+下記の2つのモードがあり、Go Modulesといわれるのは後者
+・GOPATH mode
+既存（v1.10まで）と同じ挙動
+標準PKG以外のすべてのモジュールをGOPATH以下のディレクトリで管理する
+パッケージの管理はリポジトリの最新リビジョンのみ
+
+・module-aware mode
+標準PKG以外のすべてのパッケージをモジュールとして管理する
+モジュールの管理、ビルドが任意のディレクトリで可能になる
+モジュールはリポジトリのバージョンタグ、またはリビジョンごとに管理される
+
+<設定>
+２つのモードはGO11MODULE環境変数で切り替わる
+on  ：常にmodule-aware modeで動く
+off ：常にGOPATH modeで動く
+auto：GOPATH直下はGOPATHモード、それ以外はmodule-aware modeで動く
+Go1.12まではデフォルトはauto
+Go1.13からはデフォルトがon
+
+<説明>
+modules-aware modeの詳細
+標準ライブラリを除くパッケージをモジュールとして扱う
+パッケージがGitなどのバージョン管理で管理されている場合はバージョンごとに異なるモジュール
+なのでモジュールの実態はパッケージ＋バージョン
+モジュールはgo.modファイルにて管理される
+モジュールのバージョンはリポジトリのリビジョン番号、またはバージョンタグによって管理される
+バージョンタグはSemantic Versioningのルールに従うことが推奨
+v2.3.4 →vメジャー.マイナー.パッチ
+後方互換がない場合はメジャー、ある場合はマイナー、不具合修正とかはパッチ
+
+
+
+<利用>
+modules-aware modeの挙動について
+モジュールのルートディレクトリに配置するgo.mmodファイルとgo modコマンドを利用する
+
+・go.modファイル
+> go mod init モジュール名
+でgo.modファイルができる
+モジュール名は何でもいいが、パッケージ名と合わせておくといい
+既存のモジュールに新しくgo.modファイルを作る時も一緒
+
+コンパイル時に参照するgo.modファイルの場所は$GOMOD変数を見るとわかる
+> go env GOMOD
+/dev/nullが返ってきた場合はgo.modファイルが親ディレクトリ含めて見当たらないとき
+
+go.modファイル内の記述は下記のコマンドからなる
+命令：記述例
+module  ： module my/thing
+go      ： 1.12
+require ： require other/thing v1.0.2
+exclude ： exclude old/thing v1.2.3
+replace ： replace bad/thing v1.4.5 => good/thing v1.4.5
+
+requireで指定したモジュールがモジュールが依存している他のモジュール
+
+・Go コマンド
+go build, go runとかはモジュール対応でも特に変化はない
+go listは-mオプションをつけることでモジュールに対応する
+go modコマンドは下記のコマンドがある
+    download    download modules to local cache
+    edit        edit go.mod from tools or scripts
+    graph       print module requirement graph
+    init        initialize new module in current directory
+    tidy        add missing and remove unused modules
+    vendor      make vendored copy of dependencies
+    verify      verify dependencies have expected content
+    why         explain why packages or modules are needed
+
+・go mod init
+go.modファイルを作る
+
+・go mod graph
+モジュールの依存関係を表示する
+
+
+〇使ってみた
+go.modファイルにモジュール定義を下記のように作成する
+> module github.com/ponta-dev/go-plactice
+
+こうした時、プロジェクトのルートディレクトリが
+github.com/ponta-dev/go-plactice
+に該当する模様
+なのでたとえばモジュール名をhumanとかして、
+ディレクトリparson以下にgoファイルを並べると、
+human/parsonパッケージみたいになる
+github.com階層を作らなくていいので、GOPATHより個人的にあり
