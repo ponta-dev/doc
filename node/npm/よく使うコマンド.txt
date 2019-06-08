@@ -1,0 +1,10 @@
+
+・npmにインストールされたっモジュールの一覧
+> npm list
+--depth=0 //階層指定で表示
+-g //グローバルインストールの確認
+
+・インストールしたモジュールに最新のバージョンがあるか確認する
+> npm outdated
+https://docs.npmjs.com/cli/outdated
+

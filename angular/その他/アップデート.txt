@@ -1,0 +1,8 @@
+<参考>
+https://angular.jp/guide/updating
+https://update.angular.io/
+
+https://qiita.com/tomy0610/items/731a41c8b6b6e5fa25ed
+
+CLIのアップデートは基本的に一度消してキャッシュクリアして再インストール
+アプリケーションのアップデートはng update

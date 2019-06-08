@@ -1,0 +1,34 @@
+
+
+GOとAngularを組み合わせたWebアプリケーションを作成する
+
+・アーキテクチャバージョン
+Angular CLI: 8.0.1
+go version go1.12.5 windows/amd64
+
+<環境構築>
+gitリポジトリの作成
+> git init
+
+go.modファイルの作成
+> go mod init github.com/ponta-dev/angular-go
+
+gitignoreファイルの作成
+
+Angularアプリケーションの作成
+> ng new ui
+> cd ui
+> ng serve --open //起動の確認
+
+goパッケージの作成
+ディレクトリを下記のように作成
+root
+ -server
+   -main
+
+main.go, main_test.goを適当に作成
+> go run ./server/main/main.go
+> go test -v github.com/ponta-dev/angular-go/server/main
+とかで実行確認
+
+
