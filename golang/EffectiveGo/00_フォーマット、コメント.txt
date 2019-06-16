@@ -1,0 +1,52 @@
+<参考>
+https://golang.org/doc/effective_go.html
+
+〇　フォーマット
+フォーマットは人によって異なり、しかし一緒だと開発効率が上がる
+なのでコーディングスタイルを合わせるべきだが、
+そのためのアプローチが長大なスタイルガイドの作成だとちょっといけてない
+
+GOだと言語側でフォーマットさせる
+gofmtがGOのプログラムを読み取り、字下げやコメントなど
+コーディングスタイルのフォーマットを行う
+
+・例）
+type T struct {
+    name string // name of the object
+    value int // its value
+}
+
+↓
+
+type T struct {
+    name    string // name of the object
+    value   int    // its value
+}
+
+
+〇　コメント
+
+
+・例）
+/*
+Package regexp implements a simple library for regular expressions.
+
+The syntax of the regular expressions accepted is:
+
+    regexp:
+        concatenation { '|' concatenation }
+    concatenation:
+        { closure }
+    closure:
+        term [ '*' | '+' | '?' ]
+    term:
+        '^'
+        '$'
+        '.'
+        character
+        '[' [ '^' ] character-ranges ']'
+        '(' regexp ')'
+*/
+package regexp
+
+

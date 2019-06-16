@@ -1,0 +1,71 @@
+＜目的＞
+Angularのビルド結果がtemplateフォルダに出力済みの想定でGOサーバーを構築する
+とりあえずhttp://localhost:8080/angular-go にアクセスするとAngularのページが見えるところまで
+
+Goのハンドラ定義はnet/httpパッケージを使う
+http.Handleやhttp.HandleFuncによって、待ち受けるURLパスとハンドラーをセットで登録する
+そのあとhttp.ListenServe(":8080", nil)でWebサーバを立ち上げる
+
+ハンドラーはhttp.Handlerインタフェースの実装
+type Handler interface {
+        ServeHTTP(ResponseWriter, *Request)
+}
+
+なのでServeHTTP関数をもつ構造体を独自に定義することで、
+URLに対する実行するハンドラーのロジックの切り替えができる
+
+・index.htmlのレスポンス
+今回AngularのビルドファイルをホームURLへのアクセスに対して返したい
+html/templateパッケージのtemplate.Templateを用いることでHTMLファイルを
+レスポンスに書き込めるので、index.htmlだけならレスポンスできる
+
+//index.htmlテンプレートの取得
+d.index = template.Must(template.ParseFiles(HTMLTemplatePath + "/" + IndexHTML))
+
+//index.htmlの書き込み
+if err := d.index.Execute(w, nil); err != nil {
+    log.Fatal("index.html Write Error", err)
+}
+
+・リソースのレスポンスに対する課題
+しかし同時に、index.htmlが参照しているjsやicoファイルなどのリソースファイルは、
+サーバに対してhttp://localhost:8080/angular-go/~~.js などの形でリクエストされる
+SpringBootとかだと.jsや.imgファイルのリソースに対するアクセスは、
+ハンドラとは別のセキュリティの枠組みでアクセス許可を設定する
+
+GOにおいてリクエストのURLに対するハンドラ以外に特定リソースへのアクセスを許可する機能はないので
+リソース要求に対するハンドラの設定を行う必要がある
+一方でindex.htmlの返却を行うハンドラと、リソース要求がくるハンドラのURLは基本的に変わらないので
+ホームパスに対するハンドラの中でリソースファイルかどうかの判定を行い、
+リソースファイルの要求であればリソースファイルの返却を行うようにする
+
+・GOのファイルサーバー
+GOでHTTPリクエストに対するファイルサーバの実装は、
+セキュリティの観点からみてもhttp.FileServer()を用いるのがベター
+FileServerはハンドラインタフェースの実装なので、FileServerの結果に対してServeHTTPを実行すると
+ハンドラとして登録していなくてもファイルサーバとして機能させられる
+FileServerを用いることで、特定ディレクトリ以外へのアクセスを制限できる
+ディレクトリの指定はhttp.Dir("ディレクトリ")
+
+http.FileServer(http.Dir(HTMLTemplatePath))
+※ベースURLとして/angular-go/のようなプレフィックスを付けた場合、
+FileServerはhttp.URLのパスをもとに指定したディレクトリ以下を検索するので
+template/angular-go/リソース
+としておかないとパスが崩れて機能しなくなる
+Angularの出力先をそのように変更してもいいが、あまりきれいではないのでhttp.StripPrefixを用いて解決する
+http.StripPrefix(HomePrefix, http.FileServer(http.Dir(HTMLTemplatePath)))
+プレフィックスとラップするハンドラを設定すると、/angular-go/の部分をうまいことやってくれる
+
+・リソースファイルかどうかの判定
+http.URL.Pathに対して正規表現の検索を行う
+.js,.ico等登録した正規表現でパスがマッチするか判定を行い、マッチした場合はファイルサーバ、
+マッチしていない場合はindex.htmlを返却する
+
+GOにおける正規表現検索はregexpパッケージを利用する
+下記のようにMustCompileなどを使ってRegexp構造体を取得できる
+regexp.MustCompile(ResourceRegexp) //ResourceRegexpは正規表現文字列
+
+Regexp構造体のMatchStringでURL.Pathが正規表現とマッチするかを判定できる
+
+
+

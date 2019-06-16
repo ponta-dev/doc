@@ -1,0 +1,60 @@
+
+
+GOとAngularを組み合わせたWebアプリケーションを作成する
+
+・アーキテクチャバージョン
+Angular CLI: 8.0.1
+go version go1.12.5 windows/amd64
+
+<環境構築>
+gitリポジトリの作成
+> git init
+
+go.modファイルの作成
+> go mod init github.com/ponta-dev/angular-go
+
+gitignoreファイルの作成
+
+Angularアプリケーションの作成
+> ng new ui
+> cd ui
+> ng serve --open //起動の確認
+
+goパッケージの作成
+ディレクトリを下記のように作成
+root
+ -server
+   -main
+
+main.go, main_test.goを適当に作成
+> go run ./server/main/main.go
+> go test -v github.com/ponta-dev/angular-go/server/main
+とかで実行確認
+
+
+・Angularの初期設定
+> ng build　の出力先の変更
+angular.jsonのbuildオプションの設定を変える
+"outputPath": "dist"
+↓
+"outputPath": "../template"
+
+初期設定だとAngularのディレクトリに出力するのでGoから見るとアクセスしづらい
+なのでプロジェクトルート側に移動する
+root
+L template //出力先
+L ui //angularのプロジェクト
+
+> http://localhost:8080/angular-go をホームパスにする
+デフォルトだとhttp://localhost:8080/
+/angular-goのURLをデフォにしたい
+
+こちらもangular.jsonのビルドとサーブの設定を変える
+初期だとangular.jsonに項目がないのでoptions以下に下記を追加する
+"baseHref": "/angular-go/"
+/angular-go/でなくangular-goとかにするとうまく動かない
+これをbuild とserveの設定に加えると
+ng serveやng buildの出力がベースのURLを考慮したものになる
+
+この設定でAngular側で開発したUIはルートディレクトリのtemplateフォルダに出力される
+あとはこの出力に対してGO側でサーバを開発する

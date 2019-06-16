@@ -3,6 +3,7 @@
 https://github.com/saibing/tools
 https://github.com/golang/go/wiki/gopls
 https://mattn.kaoriya.net/software/lang/go/20181217000056.htm
+https://qiita.com/ochipin/items/cae787d75ae91247c722
 
 
 GOのVSC等のエディタを使った開発で、コードの補完は基本ほぼマスト
