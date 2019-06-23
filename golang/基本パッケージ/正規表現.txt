@@ -1,0 +1,67 @@
+https://golang.org/pkg/regexp/
+
+
+〇　Package regexp
+正規表現検索用のパッケージ
+正規表現の使い方は一般的なほかの言語と同様で、下記に定義されている
+https://github.com/google/re2/wiki/Syntax
+
+go doc regexp/syntax
+でも確認できる
+
+実行時間は入力サイズに対して線形に実行されることが保証されている
+これは多くのほかOSSライブラリでは保証されていないこと
+
+Find～～系のメソッドで検索できる
+～～はAll、String、Submatch、Indexの組み合わせが入る
+`foo.?`のようなパターンに対して
+FindAll：["food","fool"] //一致するものすべて
+
+
+正規表現検索に用いるパターン文字列を実行時に定義するor事前に定義するで関数のパターンがあるが
+基本的にシンプルなパッケージ
+
+・func Match
+    matched, err := regexp.Match(`foo.*`, []byte(`seafood`))
+	fmt.Println(matched, err)
+
+`foo.*`が正規表現パターンで2つ目の引数が検索対象
+``は文字列だが''とか""とは扱いが違うので注意
+パターンが正規表現としておかしい場合にエラーになる
+
+Match系の関数は検索文字があるかどうかのboolを返す
+
+・func QuoteMeta
+    fmt.Println(regexp.QuoteMeta(`Escaping symbols like: .+*?()|[]{}^$`))
+    ＞Escaping symbols like: \.\+\*\?\(\)\|\[\]\{\}\^\$
+
+引数に受け取った文字列のエスケープ文字を返す
+
+・type Regexp
+コンパイルされた正規表現のパターン
+事前にこの構造体を作ったうえで文字列検索とかすることが多そう
+基本的に複数のゴールーチンの使用に耐える
+
+主に下記の関数を持っている
+Find系：検索結果抽出
+Match系：一致判定
+Replace系：置き換え（元の値は変わらない）
+Splite：分離
+その他
+
+FindAll系の2番目の引数のintは何件検索結果を返すか
+-1で制限なし
+
+Regexpの取得はCompile関数、またはCompilePOSiX関数を使う（またはそのMust系関数）
+
+・func Compile(expr string) (*Regexp, error)
+正規表現文字列を受け取り、Regexp構造体を返す
+コンパイルできない場合はErrorを返す
+MustCompileになるとエラーは帰ってこずにパニックが発生する
+失敗時に落とす場合はMustを使う
+Compileの場合、左側から一致の最短一致を返す
+CompilePOSiXは一致の最長一致
+
+
+
+

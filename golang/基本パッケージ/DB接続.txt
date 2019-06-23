@@ -1,0 +1,62 @@
+GO
+https://golang.org/pkg/database/sql/
+ドライバー
+postgres：https://godoc.org/github.com/lib/pq
+
+WIKI?
+https://github.com/golang/go/wiki/SQLInterface
+
+
+〇　database/sqlパッケージ
+DB接続のインタフェースを提供する
+
+・DB接続
+sql.Open()を使う
+db, err := sql.Open(driver, dataSourceName)
+driverは"postgre"とか
+dataSourceNameは"host=localhost port=5432 user=postgres"とか
+
+パスワードとかは別ファイルにしてGitに上げないように注意
+
+OpenによってDB構造体を取得できる
+DBは0個以上の接続プールを表すDBハンドル
+複数のゴールーチンが同時に使用しても平気
+トランザクションの取得などの関数をもつ
+func (db *DB) SetMaxIdleConns(n int)
+func (db *DB) SetMaxOpenConns(n int)
+func (db *DB) SetConnMaxLifetime(d time.Duration)
+あたりでプールする接続数を設定できる
+
+Openでは直接DB接続を開くわけではなく引数の検証を行うだけ
+実際に接続が可能かはクエリが流れるまでわからない
+なのでクエリの実行前に接続確認を行う場合はPingやPingContext()を使う
+
+if err := db.PingContext(ctx); err != nil {
+  log.Fatal(err)
+}
+
+Open()による接続は複数ゴールーチンに対して安全であり、
+実際の接続を持つわけではないので、基本的に1回呼べばいい
+DBのOpenに対して
+defer db.Close()
+はセット
+
+DB接続関連の関数の中で、contextパッケージが結構使われている
+タイムアウト設定とか呼び出しに対して設定したい場合に使うっぽい
+
+・SQL実行
+Exec～～
+結果がSelectとかの行で返ってくるタイプ以外のSQL実行に使う
+
+Query～～
+Selectとかの行データが返るタイプのSQL実行に使う
+
+・接続確認
+Ping～～
+SQL実行前に接続がまだ有効かを確認するために使う
+
+・トランザクション
+DB構造体からBegin()やBeginTx()を用いて作成する
+
+
+

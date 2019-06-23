@@ -1,0 +1,32 @@
+<参考>
+https://deeeet.com/writing/2016/07/22/context/
+
+https://twinbird-htn.hatenablog.com/entry/2017/04/07/214420
+
+https://qiita.com/TsuyoshiUshio@github/items/34b63b663ffd56125c07
+Go本家
+https://blog.golang.org/context
+
+〇　contextパッケージ
+Goにおいてなぜcontextパッケージが必要なのか？
+例えばWebサーバなどでは個別のリクエストはゴールーチンで処理される
+そしてハンドラ内ではさらにDBなどにリクエストを投げた結果をもとに処理を実行する
+
+こうした実行に時間がかかる処理をゴールーチンで行う場合に下記を気を付ける必要がある
+・タイムアウトの設定
+・生成したゴールチンを適切にキャンセルし開放すること
+・ネストしたゴールーチンの管理
+
+contextパッケージはこのキャンセルのためのシグナルをAPIの境界を越えて受け渡すための仕組み
+ある関数から別の関数へとキャンセルを伝搬させるのに使う
+
+基本的にはcontext.Background()により新規のコンテキストを作成し
+With～～でcontextに対してタイムアウトなどを設定する
+With系の関数の引数としてcontextとキャンセル用の関数を取得できるので、
+defer cancel()
+でキャンセル用の関数を呼びつつ、contextを引数に持つ関数に対してcontextを渡す
+
+
+
+
+
