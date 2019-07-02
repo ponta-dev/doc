@@ -1,0 +1,36 @@
+<参考>
+https://qiita.com/yumin/items/5de33b068ead564ebcbf
+
+https://qiita.com/loftkun/items/1a9951d1864bebdc51e1
+
+メジャーどころはBeegoとGin、Echoとか？
+
+
+〇　Gin
+https://github.com/gin-gonic/gin
+
+サンプル
+package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+	r.Run()
+}
+
+gin.Default()
+ロガーとMWエンジンが接続されたエンジンを返す
+func Default() *Engine {
+	debugPrintWARNINGDefault()
+	engine := New()
+	engine.Use(Logger(), Recovery())
+	return engine
+}
+
+

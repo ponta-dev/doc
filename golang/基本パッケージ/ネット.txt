@@ -1,0 +1,135 @@
+https://golang.org/pkg/net/
+
+package net
+
+＜概要＞
+TCP/IP、UDP、DNS、UNIXドメインソケットを含むネットワークIOのポータブルなインタフェースを提供する
+低レベルのネットワークのプリミティブを提供するが、基本インタフェース以外ほとんどの場合は使わない
+crypto/tlsにも同様のDialとListen機能を提供している
+
+・Dial（ダイアル）機能
+サーバに接続する
+
+conn, err := net.Dial("tcp", "golang.org:80")
+if err != nil {
+	// handle error
+}
+fmt.Fprintf(conn, "GET / HTTP/1.0\r\n\r\n")
+status, err := bufio.NewReader(conn).ReadString('\n')
+// ...
+
+・Listen（リッスン）機能
+サーバを作る
+
+ln, err := net.Listen("tcp", ":8080")
+if err != nil {
+	// handle error
+}
+for {
+	conn, err := ln.Accept()
+	if err != nil {
+		// handle error
+	}
+	go handleConnection(conn)
+}
+
+・名前解決
+DNS関連はDialやLookupHost、LookupAddrを使ってもOSによって異なる
+UNIXシステム
+２つオプションがある
+/etc/resolv.confにリストされたサーバに直接DNS要求を送信する純粋なGOリゾルバ
+getaddrinfoやgetnameinfoなどのCライブラリルーチンを呼び出すcgoベースのリゾルバ
+
+デフォルトはGo純正のリゾルバ
+OSのスレッドを消費するCに対してGoはゴールーチンだけ消費するため
+GODEBUG環境変数のnetdns値によってgoまたはcgoを切り替えられる
+export GODEBUG=netdns=go    # force pure Go resolver
+export GODEBUG=netdns=cgo   # force cgo resolver
+
+Windowsの場合リゾルバは常にGetAddrInfoやDnsQueryなどのCライブラリ関数を利用する
+
+＜定数＞
+・IPアドレス長（bytes）
+const (
+        IPv4len = 4
+        IPv6len = 16
+)
+
+＜変数＞
+・Well-knownIPアドレス
+var (
+        IPv4bcast     = IPv4(255, 255, 255, 255) // limited broadcast
+        IPv4allsys    = IPv4(224, 0, 0, 1)       // all systems
+        IPv4allrouter = IPv4(224, 0, 0, 2)       // all routers
+        IPv4zero      = IPv4(0, 0, 0, 0)         // all zeros
+)
+
+・Well-knownIPv6アドレス
+var (
+        IPv6zero                   = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+        IPv6unspecified            = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+        IPv6loopback               = IP{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+        IPv6interfacelocalallnodes = IP{0xff, 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+        IPv6linklocalallnodes      = IP{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01}
+        IPv6linklocalallrouters    = IP{0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x02}
+)
+
+・デフォルトリゾルバ
+パッケージレベルのLookup関数と特別なリゾルバなしのダイアラーが使うデフォルトのリゾルバ
+var DefaultResolver = &Resolver{}
+
+＜パッケージ関数＞
+・func JoinHostPort(host, port string) string
+ホストとポートをhost:portの形式のネットワークアドレスに結合する
+IPv6のようにホストに:が含まれる場合は[host]:portを返す
+
+・func LookupAddr(addr string) (names []string, err error)
+指定されたアドレスの逆引きを行い、アドレスにマッピングされている名前のリストを返す
+IPアドレスをaddrにつっこむ
+該当があるとドメインが返ってくる
+
+・func LookupCNAME(host string) (cname string, err error)
+ホストの正規名を返す
+ホストはgolang.orgとか。IPアドレスではない
+
+・func LookupHost(host string) (addrs []string, err error)
+ホストのIPアドレスを返す
+v6とv4とかで返ってくる場合もあり（↓こんな）
+[2404:6800:4004:80d::2011 216.58.197.241]
+
+・func LookupPort(network, service string) (port int, err error)
+与えられたネットワークとサービスのポートを返す
+networkは"tcp"か"udp"、serviceは実行しているサービス、例えば"telent"、"http"、"ssh"とか　らしい
+net.LookupPort("tcp", "http")は80が返ってくる
+ローカルでサービスが起動してるとかは関係ない
+
+・func LookupTXT(name string) ([]string, error)
+指定したドメインのTXTを返す
+
+・func ParseCIDR(s string) (IP, *IPNet, error)
+ParseCIDR("192.0.2.1/24") でIPアドレス192.0.2.1とネットワーク192.0.2.0/24を返す
+
+・func Pipe() (Conn, Conn)
+同期のインメモリ全2重ネットワーク接続を作成する
+両端はConnインタフェースを実装する
+一方の端での読み込みはもう一方での書き込みと一致し、２つの間でデータが直接コピーされる
+内部バッファリングはない
+
+・func SplitHostPort(hostport string) (host, port string, err error)
+host:port, host%zon:port, [host]:port, [host%zone]:portを
+hostまたはhost%zoneとportに分ける
+
+
+＜インタフェース＞
+
+・type Addr interface {
+        Network() string // name of the network (for example, "tcp", "udp")
+        String() string  // string form of address (for example, "192.0.2.1:25", "[2001:db8::1]:80")
+}
+ネットワークエンドポイントアドレス
+Dialに渡すための2つの関数を持つ
+
+・func InterfaceAddrs() ([]Addr, error)
+システムのユニキャストインタフェースアドレスのリストを返す
+
+＜構造体＞

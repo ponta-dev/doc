@@ -1,0 +1,71 @@
+<目的>
+PostgreSQLをGOで操作したい
+SQL実行とか
+
+GoでSQL実行等を行うためにはdatabase/sqlパッケージを利用する
+https://golang.org/pkg/database/sql/
+
+またデータベースに接続するためのドライバが必要
+各DBへのドライバは下記を参照
+https://github.com/golang/go/wiki/SQLDrivers
+
+今回はPostgreSQLのGo純正ドライバである
+https://github.com/lib/pq
+を利用する
+
+ドライバのインストールはgo getするだけ
+go get github.com/lib/pq
+
+ドライバのドキュメントは下記を参照
+https://godoc.org/github.com/lib/pq
+
+database/sqlパッケージのOpen関数でDBへの接続情報を管理するDB構造体を取得できる
+ドライバは_ "github.com/lib/pq"でインポートすれば、
+Open時のドライバ指定を"postgres"で利用できる模様
+サンプル）
+import (
+	"database/sql"
+
+	_ "github.com/lib/pq"
+)
+
+func main() {
+	connStr := "user=pqgotest dbname=pqgotest sslmode=verify-full"
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	age := 21
+	rows, err := db.Query("SELECT name FROM users WHERE age = $1", age)
+	…
+}
+
+DBはPostgreSQLをインストールして起動しておく
+接続文字列でhost=localhost・・・のように書いてOpen→Executeで普通にすぐSQLが実行できる
+DB構造体は接続情報を持つだけなので、
+実際にSQLを投げる際はPingで接続を確認するのがベター
+
+またQueryなどの実行の際にQueryContextなどのContext系の関数があり、
+これを使うことでタイムアウトなどの設定ができる
+
+いまいまDBに投げるSQLはソースべた書きだがSQLファイルを読み込んで実行するようにしたい
+SQLファイルの読み込みはtemplateパッケージによさげなのがもしかしたらあるかもだが、
+今回はio/ioutilのReadFile関数を利用した
+https://golang.org/pkg/io/ioutil/
+
+ReadFileに成功するとファイルのバッファー配列が取得できる
+この配列をbytesパッケージのNewBufferに食わせてBuffer構造体.String()で文字列を取得する
+https://golang.org/pkg/bytes/#NewBuffer
+
+この文字列をdb.Execあたりにそのまま渡すとSQLファイルを読み込んでDBに投げることができる
+
+〇　コマンドライン起動
+ローダーの起動について、テストを使うのはいろいろとまずそうだったので
+コマンドラインから実行制御を行う形で対応を考える
+Goはflagパッケージというコマンドラインのパーサーを標準で持っている
+これを使って実行を制御する
+
+使い方はフラグの定義→flag.Parse()→フラグ利用
+今回の使い方はシンプルなので、flag.Parse()→flag.Arg(0)で初めの引数を文字列で取得し、
+スイッチ文にかけて実行を切り替える
