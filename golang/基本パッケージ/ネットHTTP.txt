@@ -256,4 +256,82 @@ HTTP要求を送信しHTTPレスポンスを返す
 カスタムヘッダでのリクエストはNewRequestとClient.DOを使う
 呼び出し完了後resp.Bodyは閉じる必要がある
 
+・func (c *Client) Head(url string) (resp *Response, err error)
+指定したURLにHEADする
+
+・func (c *Client) Post(url, contentType string, body io.Reader) (resp *Response, err error)
+POSTを発行する
+呼び出し元は呼び出し終わったらresp.Bodyをクローズする必要がある
+
+・func (c *Client) PostForm(url string, data url.Values) (resp *Response, err error)
+リクエストボディにURLエンコードされたデータのキーと値でPOSTする場合
+Content-Typeヘッダーはapplication / x-www-form-urlencodedに設定される
+他のヘッダを使う場合はカスタムクライアントを作る
+
+
+
+・type Cookie struct {
+        Name  string
+        Value string
+
+        Path       string    // optional
+        Domain     string    // optional
+        Expires    time.Time // optional
+        RawExpires string    // for reading cookies only
+
+        // MaxAge=0 means no 'Max-Age' attribute specified.
+        // MaxAge<0 means delete cookie now, equivalently 'Max-Age: 0'
+        // MaxAge>0 means Max-Age attribute present and given in seconds
+        MaxAge   int
+        Secure   bool
+        HttpOnly bool
+        SameSite SameSite // Go 1.11
+        Raw      string
+        Unparsed []string // Raw text of unparsed attribute-value pairs
+}
+
+HTTP応答のSet-CookieヘッダーまたはHTTP要求のCookieヘッダーで送信されたHTTP Cookieを表す
+
+
+・type Dir string
+サーバのファイルシステムの実装？
+
+・func (d Dir) Open(name string) (File, error)
+
+
+＜インタフェース＞
+・type Handler interface {
+        ServeHTTP(ResponseWriter, *Request)
+}
+
+HTTPリクエストへの応答を表す
+ServeHTTPは応答ヘッダとデータをResponseWriterに書き込んでから戻る必要がある
+呼び出し後にResponseWriterへのアクセスは禁止される
+MWによってはResponseWriterに書き込むとRequest.Bodyを読めなくなるので先にリクエストは読み込むべき
+ハンドラはリクエストを修正してはいけない
+基本的にハンドラでパニックが起きた場合、サーバは回復させる
+
+・func FileServer(root FileSystem) Handler
+ルートパスをルートとするファイルシステムの内容でHTTP要求を処理するハンドラを返す
+OSのファイルシステムを利用するためにhttp.Dirを使う
+index.htmlで終わるパスはすべて同じパスにリダイレクトする
+
+・func NotFoundHandler() Handler
+NotFoundを返す単純なハンドラを返す
+ルートパスとかにつけとくと便利
+
+・func RedirectHandler(url string, code int) Handler
+指定したURLにリダイレクトするハンドラを返す
+コードは3xx系
+通常はStatusMovedPermanently、StatusFoundまたはStatusSeeOther
+
+・func StripPrefix(prefix string, h Handler) Handler
+リクエストURLのパスから指定されたプレフィックスを削除してハンドラを呼び出すハンドラを返す
+指定したプレフィックスで始まっていないアクセスは404で処理する
+ファイルサーバと連携させるのに使う
+
+・func TimeoutHandler(h Handler, dt time.Duration, msg string) Handler
+指定された時間で実行するハンドラを返す
+実行時間を超えた場合は503を返す
+
 
