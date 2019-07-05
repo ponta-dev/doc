@@ -132,4 +132,139 @@ Dialに渡すための2つの関数を持つ
 ・func InterfaceAddrs() ([]Addr, error)
 システムのユニキャストインタフェースアドレスのリストを返す
 
+
+・type Conn interface {
+        // 接続からデータを読み込む
+        Read(b []byte) (n int, err error)
+
+        // 接続にデータを書き込む
+        Write(b []byte) (n int, err error)
+
+        // 接続を閉じる
+        // ブロックされていた読み込み、書き込み操作はブロックが解除されエラーが返る
+        Close() error
+
+        // ローカルネットワークアドレス
+        LocalAddr() Addr
+
+        // リモートネットワークアドレス
+        RemoteAddr() Addr
+
+        // Read、Write両方に対してデッドラインを設定する
+        SetDeadline(t time.Time) error
+
+        // 読み込みのデッドライン
+        SetReadDeadline(t time.Time) error
+
+        // 書き込みのデッドライン
+        SetWriteDeadline(t time.Time) error
+}
+一般的なストリーム指向のネットワーク接続
+Connインタフェースの実装として
+type IPConn struct {
+        // contains filtered or unexported fields
+}
+や
+type TCPConn struct {
+        // contains filtered or unexported fields
+}
+type UDPConn struct {
+        // contains filtered or unexported fields
+}
+がある
+
+また似たようなインタフェースに下記がある
+type PacketConn interface {
+        ReadFrom(p []byte) (n int, addr Addr, err error)
+
+        WriteTo(p []byte, addr Addr) (n int, err error)
+
+        Close() error
+
+        LocalAddr() Addr
+
+        SetDeadline(t time.Time) error
+
+        SetReadDeadline(t time.Time) error
+
+        SetWriteDeadline(t time.Time) error
+}
+
+・func Dial(network, address string) (Conn, error)
+指定したネットワーク上のアドレスに接続する
+ネットワークは
+ "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only), 
+ "udp", "udp4" (IPv4-only), "udp6" (IPv6-only), 
+ "ip", "ip4" (IPv4-only), "ip6" (IPv6-only), 
+ "unix", "unixgram" and "unixpacket".
+
+        Dial("tcp", "golang.org:http")
+        Dial("tcp", "192.0.2.1:http")
+        Dial("tcp", "198.51.100.1:80")
+        Dial("udp", "[2001:db8::1]:domain")
+        Dial("udp", "[fe80::1%lo0]:53")
+        Dial("tcp", ":80")
+
+・func DialTimeout(network, address string, timeout time.Duration) (Conn, error)
+Dialとほぼ一緒だがタイムアウトする
+
+・func FileConn(f *os.File) (c Conn, err error)
+開いているファイルに対応するネットワーク接続のコピーを返す
+終了したファイルを閉じるのは呼び出し側の責任
+
+
+・type Listener interface {
+        // 待機して次の接続を返す
+        Accept() (Conn, error)
+
+        // リスナーをクローズする
+        // Any blocked Accept operations will be unblocked and return errors.
+        Close() error
+
+        // Addr returns the listener's network address.
+        Addr() Addr
+}
+ネットワークリスナー
+複数のゴールーチンがリスナーのメソッドを同時に呼ぶことがある
+
+・func FileListener(f *os.File) (ln Listener, err error)
+ファイルのリスナー
+
+・func Listen(network, address string) (Listener, error)
+ローカルネットワークで接続をリッスンする
+
+実装クラスとして例えば下記がある
+type TCPListener struct {
+        // contains filtered or unexported fields
+}
+
+
 ＜構造体＞
+・type Dialer struct {
+        // The default is no timeout.
+        Timeout time.Duration
+
+        Deadline time.Time
+
+        LocalAddr Addr
+
+        DualStack bool // Go 1.2
+
+        FallbackDelay time.Duration // Go 1.5
+
+        KeepAlive time.Duration // Go 1.3
+
+        // Resolver optionally specifies an alternate resolver to use.
+        Resolver *Resolver // Go 1.8
+
+        Cancel <-chan struct{} // Go 1.6
+
+        Control func(network, address string, c syscall.RawConn) error // Go 1.11
+}
+各フィールドのゼロ値はオプションなしでDialするのと同じ
+Dialに対して設定して呼びだしたい場合に使う
+
+・func (d *Dialer) Dial(network, address string) (Conn, error)
+・func (d *Dialer) DialContext(ctx context.Context, network, address string) (Conn, error)
+
+

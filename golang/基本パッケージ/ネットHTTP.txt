@@ -1,0 +1,259 @@
+package net/http
+
+https://golang.org/pkg/net/http/
+
+＜概要＞
+・クライアント
+HTTPクライアントとHTTPサーバの機能を提供する
+
+resp, err := http.Get("http://example.com/")
+...
+resp, err := http.Post("http://example.com/upload", "image/jpeg", &buf)
+...
+resp, err := http.PostForm("http://example.com/form",
+	url.Values{"key": {"Value"}, "id": {"123"}})
+
+のようにHTTPリクエストを行う
+HTTPリクエストの後はクライアントはリクエストボディを閉じる必要がある
+resp, err := http.Get("http://example.com/")
+if err != nil {
+	// handle error
+}
+defer resp.Body.Close()
+
+HTTPクライアントのヘッダー、リクエストポリシーなどの設定を行う場合はClient構造体を使う
+プロキシ、TLS,キープアライブ、圧縮などの制御をする場合はTransport構造体を使う
+Transportは使いまわし推奨であり複数ゴールーチンの使用に耐える
+
+
+・サーバ
+ListenAndServeは与えられたアドレスとハンドラでHTTPサーバを起動する
+ハンドラはDefaultServeMuxに対してハンドラを追加する形
+DefaultServeMuxはパッケージの変数
+
+Server構造体を使うことでカスタムサーバを作ることができる
+s := &http.Server{
+	Addr:           ":8080",
+	Handler:        myHandler,
+	ReadTimeout:    10 * time.Second,
+	WriteTimeout:   10 * time.Second,
+	MaxHeaderBytes: 1 << 20,
+}
+log.Fatal(s.ListenAndServe())
+
+HTTPSを利用する場合HTTP/2プロトコルをサポートする
+変えたい場合はカスタムサーバを使う
+
+
+
+＜定数＞
+const (
+        MethodGet     = "GET"
+        MethodHead    = "HEAD"
+        MethodPost    = "POST"
+        MethodPut     = "PUT"
+        MethodPatch   = "PATCH" // RFC 5789
+        MethodDelete  = "DELETE"
+        MethodConnect = "CONNECT"
+        MethodOptions = "OPTIONS"
+        MethodTrace   = "TRACE"
+)
+
+
+const (
+        StatusContinue           = 100 // RFC 7231, 6.2.1
+        StatusSwitchingProtocols = 101 // RFC 7231, 6.2.2
+        StatusProcessing         = 102 // RFC 2518, 10.1
+
+        StatusOK                   = 200 // RFC 7231, 6.3.1
+        StatusCreated              = 201 // RFC 7231, 6.3.2
+        StatusAccepted             = 202 // RFC 7231, 6.3.3
+        StatusNonAuthoritativeInfo = 203 // RFC 7231, 6.3.4
+        StatusNoContent            = 204 // RFC 7231, 6.3.5
+        StatusResetContent         = 205 // RFC 7231, 6.3.6
+        StatusPartialContent       = 206 // RFC 7233, 4.1
+        StatusMultiStatus          = 207 // RFC 4918, 11.1
+        StatusAlreadyReported      = 208 // RFC 5842, 7.1
+        StatusIMUsed               = 226 // RFC 3229, 10.4.1
+
+        StatusMultipleChoices  = 300 // RFC 7231, 6.4.1
+        StatusMovedPermanently = 301 // RFC 7231, 6.4.2
+        StatusFound            = 302 // RFC 7231, 6.4.3
+        StatusSeeOther         = 303 // RFC 7231, 6.4.4
+        StatusNotModified      = 304 // RFC 7232, 4.1
+        StatusUseProxy         = 305 // RFC 7231, 6.4.5
+
+        StatusTemporaryRedirect = 307 // RFC 7231, 6.4.7
+        StatusPermanentRedirect = 308 // RFC 7538, 3
+
+        StatusBadRequest                   = 400 // RFC 7231, 6.5.1
+        StatusUnauthorized                 = 401 // RFC 7235, 3.1
+        StatusPaymentRequired              = 402 // RFC 7231, 6.5.2
+        StatusForbidden                    = 403 // RFC 7231, 6.5.3
+        StatusNotFound                     = 404 // RFC 7231, 6.5.4
+        StatusMethodNotAllowed             = 405 // RFC 7231, 6.5.5
+        StatusNotAcceptable                = 406 // RFC 7231, 6.5.6
+        StatusProxyAuthRequired            = 407 // RFC 7235, 3.2
+        StatusRequestTimeout               = 408 // RFC 7231, 6.5.7
+        StatusConflict                     = 409 // RFC 7231, 6.5.8
+        StatusGone                         = 410 // RFC 7231, 6.5.9
+        StatusLengthRequired               = 411 // RFC 7231, 6.5.10
+        StatusPreconditionFailed           = 412 // RFC 7232, 4.2
+        StatusRequestEntityTooLarge        = 413 // RFC 7231, 6.5.11
+        StatusRequestURITooLong            = 414 // RFC 7231, 6.5.12
+        StatusUnsupportedMediaType         = 415 // RFC 7231, 6.5.13
+        StatusRequestedRangeNotSatisfiable = 416 // RFC 7233, 4.4
+        StatusExpectationFailed            = 417 // RFC 7231, 6.5.14
+        StatusTeapot                       = 418 // RFC 7168, 2.3.3
+        StatusMisdirectedRequest           = 421 // RFC 7540, 9.1.2
+        StatusUnprocessableEntity          = 422 // RFC 4918, 11.2
+        StatusLocked                       = 423 // RFC 4918, 11.3
+        StatusFailedDependency             = 424 // RFC 4918, 11.4
+        StatusTooEarly                     = 425 // RFC 8470, 5.2.
+        StatusUpgradeRequired              = 426 // RFC 7231, 6.5.15
+        StatusPreconditionRequired         = 428 // RFC 6585, 3
+        StatusTooManyRequests              = 429 // RFC 6585, 4
+        StatusRequestHeaderFieldsTooLarge  = 431 // RFC 6585, 5
+        StatusUnavailableForLegalReasons   = 451 // RFC 7725, 3
+
+        StatusInternalServerError           = 500 // RFC 7231, 6.6.1
+        StatusNotImplemented                = 501 // RFC 7231, 6.6.2
+        StatusBadGateway                    = 502 // RFC 7231, 6.6.3
+        StatusServiceUnavailable            = 503 // RFC 7231, 6.6.4
+        StatusGatewayTimeout                = 504 // RFC 7231, 6.6.5
+        StatusHTTPVersionNotSupported       = 505 // RFC 7231, 6.6.6
+        StatusVariantAlsoNegotiates         = 506 // RFC 2295, 8.1
+        StatusInsufficientStorage           = 507 // RFC 4918, 11.5
+        StatusLoopDetected                  = 508 // RFC 5842, 7.2
+        StatusNotExtended                   = 510 // RFC 2774, 7
+        StatusNetworkAuthenticationRequired = 511 // RFC 6585, 6
+)
+
+
+
+＜変数＞
+エラー回り色々
+
+・var DefaultClient = &Client{}
+Get,Head、Postがデフォルトで使うクライアント
+
+・var DefaultServeMux = &defaultServeMux
+Serveが利用するデフォルトのサーバ
+
+
+
+＜関数＞
+・func CanonicalHeaderKey(s string) string
+最初の文字とハイフンに続く任意の文字を大文字に変換する
+残りは小文字に変換
+たとえば、 "accept-encoding"の正規のキーは "Accept-Encoding"
+
+・func DetectContentType(data []byte) string
+最大512バイトのデータしか考慮しないが常に有効なMIMEタイプを返す
+判定できない場合は"application / octet-stream"
+
+・func Error(w ResponseWriter, error string, code int)
+指定されたエラーメッセージとHTTPコードでリクエストに応答する
+呼び出し側は、これ以上wへの書き込みが行われないようにする必要がある
+
+・func Handle(pattern string, handler Handler)
+DefaultServeMuxにハンドラとパスを追加する
+
+・func HandleFunc(pattern string, handler func(ResponseWriter, *Request))
+DefaultServeMuxにハンドラ関数とパスを追加する
+
+・func ListenAndServe(addr string, handler Handler) error
+登録されたハンドラとともにHTTPサーバを立ち上げる
+ハンドラは通常nilで、その場合DefaultServeMuxを利用する
+常にnil以外のerrorを返す
+
+・func ListenAndServeTLS(addr, certFile, keyFile string, handler Handler) error
+HTTPSサーバを立てるために使う
+http.ListenAndServeTLS(":8443", "cert.pem", "key.pem", nil)とか
+
+・func MaxBytesReader(w ResponseWriter, r io.ReadCloser, n int64) io.ReadCloser
+着信要求本文のサイズを制限するためのリーダー
+クライアントからの大量の要求の送信に対してサーバリソースの無駄遣いを防ぐ
+
+・func NotFound(w ResponseWriter, r *Request)
+404でレスポンスする
+
+・func ProxyFromEnvironment(req *Request) (*url.URL, error)
+特定のリクエストに使用するProxyサーバのURLを返す
+
+・func ProxyURL(fixedURL *url.URL) func(*Request) (*url.URL, error)
+Transportで使うための常に同じURLを返すプロキシ関数を返す
+
+・func Redirect(w ResponseWriter, r *Request, url string, code int)
+URLのリダイレクトをする
+codeは3xx系のコードである必要がある（通常はStatusMovedPermanently、StatusFoundまたはStatusSeeOther）
+Content-Typeヘッダーが設定されていない場合、"text/html; charset=utf-8"を設定し、
+小さなHTMLを本文に書き込む
+Content-Typeヘッダーをnilを含み編集した場合はその動作はしない
+
+・func Serve(l net.Listener, handler Handler) error
+netパッケージのListenerを使ったサーバを作る
+HandlerはなければDefaultが起動する
+
+・func ServeContent(w ResponseWriter, req *Request, name string, modtime time.Time, content io.ReadSeeker)
+提供されたReadSpeekerを使用してリクエストにこたえる
+
+・func ServeFile(w ResponseWriter, r *Request, name string)
+指定されたファイル、またはディレクトリでリクエストに答える
+ディレクトリ名が相対パスの場合は現在のディレクトリからの相対パスとして扱う
+
+提供された名前がユーザからの入力で構成されている場合はセキュリティの観点からサニタイズされている必要がある
+この予防としてr.URL.Pathに..が含まれる要求を拒否する
+また/index.htmlで終わるすべての要求を同じパスにリダイレクトする
+このリダイレクトの回避をしたい場合はパスを変更するかServeContentを利用する
+この2つの場合を除いて通常URLは利用しない
+
+・func SetCookie(w ResponseWriter, cookie *Cookie)
+Cookieを設定する
+
+・func StatusText(code int) string
+コードのステータスやコンテキストを返す
+
+
+＜構造体＞
+
+・type Client struct {
+        Transport RoundTripper
+
+        CheckRedirect func(req *Request, via []*Request) error
+
+        Jar CookieJar
+
+        Timeout time.Duration // Go 1.3
+}
+
+ClientはHTTPクライアント
+デフォルトだとDeafaultTransportを使用する
+クライアントのTraansportは通常内部状態（キャッシュされたTCP接続）をもっているので、
+クライアントは必要に応じてではなく使いまわしをするべき
+
+Cookieやリダイレクトも処理する
+リダイレクトに従うと最初のリクエストで設定されたすべてのヘッダーを転送する
+機密性の高いヘッダはドメインが完全一致でない場合は無視される
+
+・func (c *Client) CloseIdleConnections()
+キープアライブ状態でアイドルになっているトランスポート上のすべての接続を閉じる
+使用している接続を中断することはない
+
+・func (c *Client) Do(req *Request) (*Response, error)
+クライアントで設定されているポリシー（リダイレクト、Cookie、認証など）に従って
+HTTP要求を送信しHTTPレスポンスを返す
+ネットワーク系の問題で通信に失敗したときにエラーを返す
+2xx以外のステータスでもエラーは返さない
+
+リクエストボディがnil以外の場合、エラーも含めて元のTransportによってクローズされる
+サーバがリダイレクトで応答したとき、クライアントは最初にCheckRedirectによりリダイレクトするかを判断する
+許可されている場合は3xx系のステータスコードをもとにリダイレクト先にGetする
+
+・func (c *Client) Get(url string) (resp *Response, err error)
+指定したURLに対してGetする
+リダイレクトの挙動はCheckRedirect
+カスタムヘッダでのリクエストはNewRequestとClient.DOを使う
+呼び出し完了後resp.Bodyは閉じる必要がある
+
+
