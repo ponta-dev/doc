@@ -215,6 +215,12 @@ Cookieを設定する
 コードのステータスやコンテキストを返す
 
 
+・func Get(url string) (resp *Response, err error)
+Clientを使わない形でのGetリクエスト
+結果のレスポンスが返る
+実際はDefaultClientを利用したGetアクセス
+
+
 ＜構造体＞
 
 ・type Client struct {
@@ -249,6 +255,8 @@ HTTP要求を送信しHTTPレスポンスを返す
 リクエストボディがnil以外の場合、エラーも含めて元のTransportによってクローズされる
 サーバがリダイレクトで応答したとき、クライアントは最初にCheckRedirectによりリダイレクトするかを判断する
 許可されている場合は3xx系のステータスコードをもとにリダイレクト先にGetする
+
+カスタムリクエストを作成した場合の実行はDoを使って行う
 
 ・func (c *Client) Get(url string) (resp *Response, err error)
 指定したURLに対してGetする
@@ -298,6 +306,278 @@ HTTP応答のSet-CookieヘッダーまたはHTTP要求のCookieヘッダーで�
 
 ・func (d Dir) Open(name string) (File, error)
 
+・type HandlerFunc func(ResponseWriter, *Request)
+受け取った関数を実行するハンドラ
+
+
+・type Header map[string][]string
+HTTPヘッダーのキーバリューのペアを表す
+CanonicalHeaderKeyによって返されるように、キーは正規形式である必要がある
+
+・func (h Header) Add(key, value string)
+ヘッダーにキーバリューを追加する
+勝手に正規化するのでキーは大文字小文字を意識しない
+
+・func (h Header) Del(key string)
+ヘッダーからキーバリューを削除する
+正規化はAdd同様
+
+・func (h Header) Get(key string) string
+指定したキーのバリューをゲットする
+なければ""が返る
+正規化はAdd同様
+
+・func (h Header) Set(key, value string)
+書き換え用
+正規化はAdd同様
+
+・func (h Header) Write(w io.Writer) error
+ワイヤーフォーマットでヘッダーを書き込む
+
+・func (h Header) WriteSubset(w io.Writer, exclude map[string]bool) error
+ワイヤフォーマットの書き込みの別パターン
+excludeを指定できる
+
+
+
+・type Request struct {
+        // Method specifies the HTTP method (GET, POST, PUT, etc.).
+        // For client requests, an empty string means GET.
+        Method string
+
+        // URL specifies either the URI being requested (for server
+        // requests) or the URL to access (for client requests).
+        URL *url.URL
+
+        // The protocol version for incoming server requests.
+        Proto      string // "HTTP/1.0"
+        ProtoMajor int    // 1
+        ProtoMinor int    // 0
+
+        // Header contains the request header fields either received
+        // by the server or to be sent by the client.
+        //	Host: example.com
+        //	accept-encoding: gzip, deflate
+        //	Accept-Language: en-us
+        //	fOO: Bar
+        //	foo: two
+        //
+        // then
+        //
+        //	Header = map[string][]string{
+        //		"Accept-Encoding": {"gzip, deflate"},
+        //		"Accept-Language": {"en-us"},
+        //		"Foo": {"Bar", "two"},
+        //	}
+        //
+        Header Header
+
+        // Body is the request's body.
+        Body io.ReadCloser
+
+        // GetBody defines an optional func to return a new copy of
+        // Body. It is used for client requests when a redirect requires
+        // reading the body more than once. Use of GetBody still
+        // requires setting Body.
+        // For server requests, it is unused.
+        GetBody func() (io.ReadCloser, error) // Go 1.8
+
+        // ContentLength records the length of the associated content.
+        // The value -1 indicates that the length is unknown.
+        ContentLength int64
+
+        TransferEncoding []string
+
+        // For server requests, the HTTP server handles this automatically
+        // and this field is not needed by Handlers.
+        //
+        // For client requests, setting this field prevents re-use of
+        // TCP connections between requests to the same hosts, as if
+        // Transport.DisableKeepAlives were set.
+        Close bool
+
+        Host string
+
+        // Form contains the parsed form data, including both the URL
+        // field's query parameters and the POST or PUT form data.
+        // This field is only available after ParseForm is called.
+        // The HTTP client ignores Form and uses Body instead.
+        Form url.Values
+
+        // PostForm contains the parsed form data from POST, PATCH,
+        // or PUT body parameters.
+        //
+        // This field is only available after ParseForm is called.
+        // The HTTP client ignores PostForm and uses Body instead.
+        PostForm url.Values // Go 1.1
+
+        // MultipartForm is the parsed multipart form, including file uploads.
+        // This field is only available after ParseMultipartForm is called.
+        // The HTTP client ignores MultipartForm and uses Body instead.
+        MultipartForm *multipart.Form
+
+        Trailer Header
+
+        RemoteAddr string
+
+        RequestURI string
+
+        TLS *tls.ConnectionState
+
+        // Cancel is an optional channel whose closure indicates that the client
+        // request should be regarded as canceled. Not all implementations of
+        // RoundTripper may support Cancel.
+        // For server requests, this field is not applicable.
+        Cancel <-chan struct{} // Go 1.5
+
+        // Response is the redirect response which caused this request
+        // to be created. This field is only populated during client
+        // redirects.
+        Response *Response // Go 1.7
+        // contains filtered or unexported fields
+}
+サーバによって受信された、またはクライアントが送信するHTTPリクエストを表す
+
+・func NewRequest(method, url string, body io.Reader) (*Request, error)
+メソッド、URL、リクエストボディを渡すとそのリクエストを返す
+サーバハンドラのテストをする場合はnet/http/httptestパッケージのNewRequest関数を使う
+
+・func (r *Request) AddCookie(c *Cookie)
+リクエストにクッキーを追加する
+
+・func (r *Request) BasicAuth() (username, password string, ok bool)
+Authorizationヘッダーに指定されているベーシック認証のユーザ名、パスワードを返す
+
+・func (r *Request) Cookie(name string) (*Cookie, error)
+名前付きクッキーを返す
+見つからないとエラー
+
+・func (r *Request) Cookies() []*Cookie
+送信されたすべてのクッキーを返す
+
+・func (r *Request) FormFile(key string) (multipart.File, *multipart.FileHeader, error)
+フォームキーの最初のファイルを返す
+サーバ側？
+
+・func (r *Request) FormValue(key string) string
+フォームキーにあう最初の値を返す
+POST、PUTの場合はURLよりボディが優先される
+キーがない場合は空文字
+サーバ側？
+
+・func (r *Request) MultipartReader() (*multipart.Reader, error)
+multipart/form-dataまたはmultipart/mixedのPOST要求である場合はMIMEマルチパートリーダーを返し、
+それ以外の場合はnilとエラーを返す
+リクエストボディをストリームとして扱う場合に使う
+サーバ側？
+
+・func (r *Request) ParseForm() error
+リクエストのForm、PostFormを作る
+リクエストのURLやボディの値を解析して作る
+
+・func (r *Request) ParseMultipartForm(maxMemory int64) error
+ParseFormのボディサイズが大きいときに使う全体版
+
+・func (r *Request) PostFormValue(key string) string
+FormValueのPOST版
+URLクエリパラメータを無視する
+
+・func (r *Request) SetBasicAuth(username, password string)
+ユーザ名、パスワードをAuthenticationヘッダにセットする
+
+
+・type Response struct {
+        Status     string // e.g. "200 OK"
+        StatusCode int    // e.g. 200
+        Proto      string // e.g. "HTTP/1.0"
+        ProtoMajor int    // e.g. 1
+        ProtoMinor int    // e.g. 0
+
+        Header Header
+
+        Body io.ReadCloser
+
+        ContentLength int64
+
+        TransferEncoding []string
+
+        Close bool
+
+        Uncompressed bool // Go 1.7
+
+        Trailer Header
+
+        Request *Request
+
+        TLS *tls.ConnectionState // Go 1.3
+}
+
+
+
+・type ServeMux struct {
+        // contains filtered or unexported fields
+}
+ハンドラの登録に使う
+DefaultServeMuxの元構造体
+
+・func NewServeMux() *ServeMux
+新しいServeMuxを作る
+
+・func (mux *ServeMux) Handle(pattern string, handler Handler)
+ハンドラの登録
+
+・func (mux *ServeMux) HandleFunc(pattern string, handler func(ResponseWriter, *Request))
+ハンドラ関数の登録
+
+・func (mux *ServeMux) Handler(r *Request) (h Handler, pattern string)
+リクエストに対するハンドラを返す
+
+・func (mux *ServeMux) ServeHTTP(w ResponseWriter, r *Request)
+URLに最も近いハンドラをディスパッチする
+
+
+・type Server struct {
+        Addr    string  // TCP address to listen on, ":http" if empty
+        Handler Handler // handler to invoke, http.DefaultServeMux if nil
+
+        TLSConfig *tls.Config
+
+        ReadTimeout time.Duration
+
+        ReadHeaderTimeout time.Duration // Go 1.8
+
+        WriteTimeout time.Duration
+
+        IdleTimeout time.Duration // Go 1.8
+
+        MaxHeaderBytes int
+
+        TLSNextProto map[string]func(*Server, *tls.Conn, Handler) // Go 1.1
+
+        ConnState func(net.Conn, ConnState) // Go 1.3
+
+        ErrorLog *log.Logger // Go 1.3
+        // contains filtered or unexported fields
+}
+HTTPサーバを起動するために必要なパラメータをもつ構造体
+
+・func (srv *Server) Close() error
+Shutdownと違い接続も含めて強制的に落とす
+
+・func (srv *Server) ListenAndServe() error
+Addrで接続設定をした後Serveでサーバを起動する
+必ず何かしらのエラーが返る
+Closeされた場合はErrServerClosedのエラーが返る
+
+・func (srv *Server) RegisterOnShutdown(f func())
+サーバをShutdownする関数を登録できる
+
+・func (srv *Server) Serve(l net.Listener) error
+サーバを起動し、リクエストに対するハンドラをゴールーチンで起動する
+
+・func (srv *Server) Shutdown(ctx context.Context) error
+接続等がちゃんと終了した後にサーバを停止する
+
 
 ＜インタフェース＞
 ・type Handler interface {
@@ -333,5 +613,24 @@ NotFoundを返す単純なハンドラを返す
 ・func TimeoutHandler(h Handler, dt time.Duration, msg string) Handler
 指定された時間で実行するハンドラを返す
 実行時間を超えた場合は503を返す
+
+
+・type Pusher interface {
+        Push(target string, opts *PushOptions) error
+}
+HTTP/2のサーバプッシュに関するインタフェース
+
+
+
+・type ResponseWriter interface {
+        Header() Header
+
+        Write([]byte) (int, error)
+
+        WriteHeader(statusCode int)
+}
+Handlerによってレスポンスを記述するために使われるインタフェース
+ServeHTTP終了後は利用できない
+
 
 
